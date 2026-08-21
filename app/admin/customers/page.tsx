@@ -48,19 +48,6 @@ export default function AdminCustomersPage() {
         }
       })
 
-      // Add default mock customer if empty
-      if (map.size === 0) {
-        map.set('simran.k@example.com', {
-          name: 'Simran Kaur',
-          email: 'simran.k@example.com',
-          phone: '+91 98765 12345',
-          ordersCount: 3,
-          totalSpent: 4297,
-          lastOrderDate: new Date().toISOString(),
-          status: 'VIP Member'
-        })
-      }
-
       setCustomers(Array.from(map.values()))
       setLoading(false)
     })

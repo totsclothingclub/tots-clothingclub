@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { getAllBanners, saveBanner, deleteBanner } from '@/lib/supabase/data-service'
 import { Banner } from '@/lib/types'
-import { PlusCircle, Edit, Trash2, Image as ImageIcon, ExternalLink, X, CheckCircle2, Upload } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Image as ImageIcon, ExternalLink, X, CheckCircle2, Upload, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminBannersPage() {
@@ -20,32 +20,64 @@ export default function AdminBannersPage() {
     display_order: 1
   })
   const [loading, setLoading] = useState(true)
-  const [desktopImageMode, setDesktopImageMode] = useState<'url' | 'upload'>('url')
-  const [mobileImageMode, setMobileImageMode] = useState<'url' | 'upload'>('url')
+  const [uploadingDesktop, setUploadingDesktop] = useState(false)
+  const [uploadingMobile, setUploadingMobile] = useState(false)
+  const [desktopImageMode, setDesktopImageMode] = useState<'url' | 'upload'>('upload')
+  const [mobileImageMode, setMobileImageMode] = useState<'url' | 'upload'>('upload')
   const desktopFileRef = useRef<HTMLInputElement>(null)
   const mobileFileRef = useRef<HTMLInputElement>(null)
 
-  // Convert selected file to base64 data URL and set on banner state
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'desktop' | 'mobile') => {
+  // Direct upload to Cloudinary and set secure CDN URL on banner state
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'desktop' | 'mobile') => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result as string
-      if (target === 'desktop') {
-        setEditingBanner(prev => ({ ...prev, desktop_image_url: base64 }))
+
+    if (target === 'desktop') setUploadingDesktop(true)
+    else setUploadingMobile(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'banners')
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.url) {
+        if (target === 'desktop') {
+          setEditingBanner(prev => ({ ...prev, desktop_image_url: data.url }))
+        } else {
+          setEditingBanner(prev => ({ ...prev, mobile_image_url: data.url }))
+        }
       } else {
-        setEditingBanner(prev => ({ ...prev, mobile_image_url: base64 }))
+        alert(data.error || 'Failed to upload image to Cloudinary')
       }
+    } catch (err: any) {
+      alert(err.message || 'Image upload failed. Check Cloudinary settings.')
+    } finally {
+      if (target === 'desktop') setUploadingDesktop(false)
+      else setUploadingMobile(false)
     }
-    reader.readAsDataURL(file)
   }
 
   const loadBanners = async () => {
     setLoading(true)
-    const data = await getAllBanners()
-    setBanners(data)
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/banners')
+      const data = await res.json()
+      if (Array.isArray(data)) setBanners(data)
+      else {
+        const local = await getAllBanners()
+        setBanners(local)
+      }
+    } catch (e) {
+      const local = await getAllBanners()
+      setBanners(local)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -54,15 +86,33 @@ export default function AdminBannersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await saveBanner(editingBanner)
-    setIsModalOpen(false)
-    loadBanners()
+    setLoading(true)
+    try {
+      await fetch('/api/admin/banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingBanner)
+      })
+      await saveBanner(editingBanner)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsModalOpen(false)
+      loadBanners()
+    }
   }
 
   const handleDelete = async (id: string) => {
     if (confirm('Delete this hero promotional banner?')) {
-      await deleteBanner(id)
-      loadBanners()
+      setLoading(true)
+      try {
+        await fetch(`/api/admin/banners?id=${id}`, { method: 'DELETE' })
+        await deleteBanner(id)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        loadBanners()
+      }
     }
   }
 
@@ -261,8 +311,12 @@ export default function AdminBannersPage() {
                 {desktopImageMode === 'upload' ? (
                   <div className="space-y-2">
                     <div
-                      onClick={() => desktopFileRef.current?.click()}
-                      className="border-2 border-dashed border-border hover:border-gold/80 rounded-xl p-4 text-center cursor-pointer bg-[#faf7f2] hover:bg-white transition-all group"
+                      onClick={() => !uploadingDesktop && desktopFileRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all group ${
+                        uploadingDesktop
+                          ? 'border-gold bg-gold/5 opacity-80 cursor-wait'
+                          : 'border-border hover:border-gold/80 bg-[#faf7f2] hover:bg-white'
+                      }`}
                     >
                       <input
                         ref={desktopFileRef}
@@ -272,9 +326,18 @@ export default function AdminBannersPage() {
                         className="hidden"
                       />
                       <div className="flex flex-col items-center gap-1.5 text-mid group-hover:text-charcoal">
-                        <Upload size={20} className="text-gold" />
-                        <span className="font-semibold text-xs text-charcoal">Click to browse or drag & drop image</span>
-                        <span className="text-[10px] text-mid">Supports JPG, PNG, WEBP (16:9 Recommended)</span>
+                        {uploadingDesktop ? (
+                          <>
+                            <Loader2 size={20} className="text-gold animate-spin" />
+                            <span className="font-semibold text-xs text-charcoal">Uploading to Cloudinary CDN...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={20} className="text-gold" />
+                            <span className="font-semibold text-xs text-charcoal">Click to browse or drag & drop image</span>
+                            <span className="text-[10px] text-mid">Supports JPG, PNG, WEBP • Saves directly to Cloudinary</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -336,8 +399,12 @@ export default function AdminBannersPage() {
 
                 {mobileImageMode === 'upload' ? (
                   <div
-                    onClick={() => mobileFileRef.current?.click()}
-                    className="border-2 border-dashed border-border hover:border-gold/80 rounded-xl p-3 text-center cursor-pointer bg-[#faf7f2] hover:bg-white transition-all group"
+                    onClick={() => !uploadingMobile && mobileFileRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all group ${
+                      uploadingMobile
+                        ? 'border-gold bg-gold/5 opacity-80 cursor-wait'
+                        : 'border-border hover:border-gold/80 bg-[#faf7f2] hover:bg-white'
+                    }`}
                   >
                     <input
                       ref={mobileFileRef}
@@ -347,8 +414,17 @@ export default function AdminBannersPage() {
                       className="hidden"
                     />
                     <div className="flex flex-col items-center gap-1 text-mid group-hover:text-charcoal">
-                      <Upload size={16} className="text-gold" />
-                      <span className="font-semibold text-[11px] text-charcoal">Click to browse mobile image</span>
+                      {uploadingMobile ? (
+                        <>
+                          <Loader2 size={16} className="text-gold animate-spin" />
+                          <span className="font-semibold text-[11px] text-charcoal">Uploading to Cloudinary...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} className="text-gold" />
+                          <span className="font-semibold text-[11px] text-charcoal">Click to browse mobile image</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (

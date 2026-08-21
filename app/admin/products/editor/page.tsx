@@ -18,8 +18,10 @@ import {
   Layers,
   Search,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  UploadCloud
 } from 'lucide-react'
+import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
 
 const allSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
 
@@ -201,16 +203,24 @@ function ProductEditorContent() {
         id: `img-${Date.now()}-${i}`,
         product_id: formData.id || '',
         image_url: url,
-        is_primary: url === formData.primary_image,
+        is_primary: url === formData.primary_image || (i === 0 && !formData.primary_image),
         display_order: i + 1
       }))
 
-      await saveProduct({
+      const payload = {
         ...formData,
         status,
         images: imagesPayload,
         primary_image: formData.primary_image || imageUrls[0] || '/images/placeholder.jpg'
+      }
+
+      await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
+
+      await saveProduct(payload)
 
       router.push('/admin/products')
     } catch (err: any) {
@@ -440,28 +450,51 @@ function ProductEditorContent() {
 
       {/* ── Tab 3: Media Gallery ── */}
       {activeTab === 'media' && (
-        <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-5">
+        <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-2">
-            <h3 className="font-serif text-lg font-semibold text-charcoal">Product Imagery</h3>
-            <span className="text-xs text-mid">{imageUrls.length} images loaded</span>
+            <div>
+              <h3 className="font-serif text-lg font-semibold text-charcoal">Product Imagery (Cloudinary & Supabase)</h3>
+              <p className="text-xs text-mid">High-resolution catalog assets are automatically optimized and served via Cloudinary CDN.</p>
+            </div>
+            <span className="text-xs font-semibold bg-beige px-2.5 py-1 rounded-md text-charcoal">{imageUrls.length} images loaded</span>
           </div>
 
-          {/* Image adder input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newImageUrl}
-              onChange={e => setNewImageUrl(e.target.value)}
-              placeholder="Paste high-res image URL (Unsplash or CDN link)..."
-              className="flex-1 text-xs p-3 rounded-lg border border-border bg-[#faf7f2] focus:bg-white focus:outline-none focus:border-gold"
-            />
-            <button
-              type="button"
-              onClick={addImage}
-              className="px-4 py-2.5 bg-charcoal text-cream text-xs font-semibold rounded-lg hover:bg-wine transition-colors"
-            >
-              + Add Image
-            </button>
+          {/* Cloudinary Drag & Drop Multi-file Uploader */}
+          <CloudinaryUploader
+            folder="products"
+            label="Upload Product Images from Computer"
+            acceptMultiple={true}
+            aspectRatioLabel="3:4 Portrait Ratio Recommended"
+            onUploadSuccess={(url) => {
+              setImageUrls(prev => {
+                const next = [...prev, url]
+                if (!formData.primary_image) {
+                  setFormData(f => ({ ...f, primary_image: url }))
+                }
+                return next
+              })
+            }}
+          />
+
+          {/* Alternative URL adder input */}
+          <div className="space-y-1.5 pt-2 border-t border-border/60">
+            <label className="text-[11px] font-semibold text-mid">Or paste direct image URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newImageUrl}
+                onChange={e => setNewImageUrl(e.target.value)}
+                placeholder="Paste high-res image URL (Unsplash, Cloudinary, etc.)..."
+                className="flex-1 text-xs p-3 rounded-lg border border-border bg-[#faf7f2] focus:bg-white focus:outline-none focus:border-gold"
+              />
+              <button
+                type="button"
+                onClick={addImage}
+                className="px-4 py-2.5 bg-charcoal text-cream text-xs font-semibold rounded-lg hover:bg-wine transition-colors"
+              >
+                + Add URL
+              </button>
+            </div>
           </div>
 
           {/* Image Previews Grid */}
