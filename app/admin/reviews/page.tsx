@@ -1,22 +1,37 @@
 'use client'
 
-import React, { useState } from 'react'
-import { INITIAL_REVIEWS } from '@/lib/supabase/mock-data'
+import React, { useState, useEffect } from 'react'
+import { getAllReviews, updateReviewStatus, deleteReview } from '@/lib/supabase/data-service'
 import { Review } from '@/lib/types'
 import { Star, CheckCircle2, MessageSquare, Trash2, Filter } from 'lucide-react'
 
 export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>(INITIAL_REVIEWS)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'approved' | 'pending'>('all')
 
-  const handleDelete = (id: string) => {
+  const loadReviews = async () => {
+    setLoading(true)
+    const data = await getAllReviews()
+    setReviews(data)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadReviews()
+  }, [])
+
+  const handleDelete = async (id: string) => {
     if (confirm('Delete this customer review?')) {
+      await deleteReview(id)
       setReviews(prev => prev.filter(r => r.id !== id))
     }
   }
 
-  const handleToggleApprove = (id: string) => {
-    setReviews(prev => prev.map(r => (r.id === id ? { ...r, is_approved: !r.is_approved } : r)))
+  const handleToggleApprove = async (id: string, currentStatus: boolean) => {
+    const nextStatus = !currentStatus
+    await updateReviewStatus(id, nextStatus)
+    setReviews(prev => prev.map(r => (r.id === id ? { ...r, is_approved: nextStatus } : r)))
   }
 
   const filtered = reviews.filter(r => {
@@ -61,9 +76,13 @@ export default function AdminReviewsPage() {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {loading ? (
           <div className="bg-white p-12 rounded-xl border border-border text-center text-mid text-xs">
-            No reviews match the selected filter.
+            Loading reviews...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white p-12 rounded-xl border border-border text-center text-mid text-xs">
+            No reviews found. Customer reviews submitted on products will appear here.
           </div>
         ) : (
           filtered.map(rev => (
@@ -97,7 +116,7 @@ export default function AdminReviewsPage() {
 
               <div className="flex items-center gap-3 self-end md:self-center">
                 <button
-                  onClick={() => handleToggleApprove(rev.id)}
+                  onClick={() => handleToggleApprove(rev.id, rev.is_approved)}
                   className={`text-xs font-semibold px-4 py-2 rounded-lg border transition-all ${
                     rev.is_approved
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'

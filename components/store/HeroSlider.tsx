@@ -16,43 +16,29 @@ interface HeroSlide {
   title: string
   subtitle: string
   description?: string
+  button_text?: string
+  button_url?: string
   image_url: string
+  mobile_image_url?: string
 }
-
-const DEFAULT_SLIDES: HeroSlide[] = [
-  {
-    title: 'FASHION THAT FITS YOU',
-    subtitle: 'STYLE HAS\nNO SIZE.',
-    description: 'Discover comfortable, stylish fashion designed for every woman.',
-    image_url: '/images/placeholder.jpg',
-  },
-  {
-    title: 'PLUS SIZE COLLECTION',
-    subtitle: 'XS TO 7XL —\nMADE FOR YOU.',
-    description: 'Exclusive styles crafted from XS to 7XL with flattering silhouettes and effortless elegance.',
-    image_url: '/images/placeholder.jpg',
-  },
-  {
-    title: 'MODEST & WESTERN WEAR',
-    subtitle: 'TIMELESS\nELEGANCE.',
-    description: 'Elevate your everyday wardrobe with our handcrafted dresses, abayas, and coordinated sets.',
-    image_url: '/images/placeholder.jpg',
-  }
-]
 
 interface HeroSliderProps {
   initialBanners?: Banner[]
 }
 
 export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
-  const slides: HeroSlide[] = initialBanners.length > 0
-    ? initialBanners.map((b, idx) => ({
-        title: b.title || DEFAULT_SLIDES[idx % DEFAULT_SLIDES.length].title,
-        subtitle: b.subtitle || DEFAULT_SLIDES[idx % DEFAULT_SLIDES.length].subtitle,
-        description: DEFAULT_SLIDES[idx % DEFAULT_SLIDES.length].description,
-        image_url: b.desktop_image_url || b.mobile_image_url || DEFAULT_SLIDES[idx % DEFAULT_SLIDES.length].image_url,
-      }))
-    : DEFAULT_SLIDES
+  if (!initialBanners || initialBanners.length === 0) {
+    return null
+  }
+
+  const slides: HeroSlide[] = initialBanners.map((b) => ({
+    title: b.title || '',
+    subtitle: b.subtitle || '',
+    button_text: b.button_text || 'SHOP NOW',
+    button_url: b.button_url || '/shop',
+    image_url: b.desktop_image_url || b.mobile_image_url || '/images/placeholder.jpg',
+    mobile_image_url: b.mobile_image_url || b.desktop_image_url || '/images/placeholder.jpg',
+  }))
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -97,11 +83,11 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
     <section className="relative w-full overflow-hidden bg-[#faf7f2] border-b border-border/60">
       
       {/* ═══════════════════════════════════════════════════
-          FULL-WIDTH 16:9 HERO BANNER CONTAINER (Desktop & Mobile)
+          FULL-WIDTH HERO BANNER CONTAINER (Desktop 16:9 & Mobile Adaptive)
       ═══════════════════════════════════════════════════ */}
-      <div className="relative w-full aspect-[16/9] min-h-[380px] sm:min-h-[480px] max-h-[82vh] overflow-hidden">
+      <div className="relative w-full aspect-[4/5] sm:aspect-[16/9] min-h-[380px] sm:min-h-[480px] max-h-[82vh] overflow-hidden">
         
-        {/* Full-width 16:9 Background Images with Smooth Crossfade */}
+        {/* Full-width Background Images with Smooth Crossfade */}
         {slides.map((slide, idx) => (
           <div
             key={idx}
@@ -109,16 +95,23 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
               currentIndex === idx ? 'opacity-100 z-0' : 'opacity-0 pointer-events-none'
             }`}
           >
+            {/* Mobile Banner Image (Screen width < 640px) */}
+            <img
+              src={slide.mobile_image_url || slide.image_url}
+              alt={slide.title}
+              className="block sm:hidden w-full h-full object-cover object-center"
+            />
+            {/* Desktop Banner Image (Screen width >= 640px) */}
             <img
               src={slide.image_url}
               alt={slide.title}
-              className="w-full h-full object-cover object-center sm:object-right-top"
+              className="hidden sm:block w-full h-full object-cover object-center sm:object-right-top"
             />
           </div>
         ))}
 
-        {/* Soft Left-to-Right Subtle Gradient Overlay for Text Readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#faf7f2]/95 via-[#faf7f2]/75 to-transparent w-full sm:w-[65%] lg:w-[55%] z-10 pointer-events-none" />
+        {/* Subtle Gradient Overlay for Text Readability: bottom-up on mobile, left-to-right on desktop */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#faf7f2]/95 via-[#faf7f2]/70 to-transparent sm:bg-gradient-to-r sm:from-[#faf7f2]/95 sm:via-[#faf7f2]/75 sm:to-transparent w-full sm:w-[65%] lg:w-[55%] z-10 pointer-events-none" />
 
         {/* ═══════════════════════════════════════════════════
             HERO CONTENT WRAPPER
@@ -160,13 +153,13 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
               ))}
             </div>
 
-            {/* ── 2. FIXED-POSITION CTA BUTTONS (Never moves across slides) ── */}
+            {/* ── 2. DYNAMIC CTA BUTTONS ── */}
             <div className="mt-3 sm:mt-5 lg:mt-6 flex items-center gap-2.5 sm:gap-3.5 pt-1">
               <Link
-                href="/shop?category=new-arrivals"
+                href={slides[currentIndex]?.button_url || '/shop'}
                 className="bg-[#141414] text-cream font-semibold text-[9px] sm:text-xs uppercase tracking-wider px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-lg hover:bg-wine transition-all text-center shadow-xs whitespace-nowrap"
               >
-                SHOP NEW ARRIVALS
+                {slides[currentIndex]?.button_text || 'SHOP NOW'}
               </Link>
               <Link
                 href="/shop?category=plus-size"
