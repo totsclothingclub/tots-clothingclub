@@ -24,27 +24,27 @@ import {
 
 export const revalidate = 0
 
-const igPhotos = [
-  { url: '/images/placeholder.jpg', tag: null },
-  { url: '/images/placeholder.jpg', tag: '499/-' },
-  { url: '/images/placeholder.jpg', tag: '499/-' },
-  { url: '/images/placeholder.jpg', tag: null },
-  { url: '/images/placeholder.jpg', tag: null },
-  { url: '/images/placeholder.jpg', tag: '499/-' },
-  { url: '/images/placeholder.jpg', tag: null },
-]
-
 export default async function HomePage() {
-  const [banners, rawCategories, products] = await Promise.all([
+  const [banners, rawCategories, products, allProducts] = await Promise.all([
     getActiveBanners(),
     getCategories(),
-    getProducts({ isBestSeller: true })
+    getProducts({ isBestSeller: true }),
+    getProducts()
   ])
 
   const categories = (rawCategories || []).filter(c => c.is_active).sort((a, b) => a.display_order - b.display_order)
 
-  // 6 Best Sellers for desktop (matching reference image exactly)
-  const bestSellers = products.slice(0, 6)
+  // 6 Best Sellers for desktop (matching reference layout)
+  const bestSellers = (products && products.length > 0 ? products : allProducts).slice(0, 6)
+
+  // Dynamic gallery photos from real products
+  const igPhotos = allProducts
+    .filter(p => p.primary_image && !p.primary_image.includes('placeholder'))
+    .slice(0, 7)
+    .map(p => ({
+      url: p.primary_image,
+      tag: p.sale_price ? `₹${p.sale_price}` : null
+    }))
 
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30">
@@ -369,53 +369,55 @@ export default async function HomePage() {
         </section>
 
         {/* ═══════════════════════════════════════════════════
-            6. SEEN ON INSTAGRAM GALLERY
+            6. SEEN ON INSTAGRAM GALLERY (Dynamic from Products)
         ═══════════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 space-y-4 sm:space-y-6 text-center">
-          <div className="space-y-0.5">
-            <h2 className="font-serif text-xl sm:text-3xl font-bold tracking-wider text-charcoal uppercase">
-              SEEN ON INSTAGRAM
-            </h2>
-            <p className="text-[11px] sm:text-xs text-gold-dark font-medium">@tots_clothingclub</p>
-          </div>
+        {igPhotos.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 space-y-4 sm:space-y-6 text-center">
+            <div className="space-y-0.5">
+              <h2 className="font-serif text-xl sm:text-3xl font-bold tracking-wider text-charcoal uppercase">
+                SEEN ON INSTAGRAM
+              </h2>
+              <p className="text-[11px] sm:text-xs text-gold-dark font-medium">@tots_clothingclub</p>
+            </div>
 
-          {/* On mobile: exactly 3 images fitting 100% viewport width without scrolling. On desktop: all 7 */}
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
-            {igPhotos.map((item, idx) => (
-              <div
-                key={idx}
-                className={`aspect-square sm:aspect-[3/4] rounded-lg sm:rounded-xl overflow-hidden border border-border group relative bg-beige ${
-                  idx >= 3 ? 'hidden lg:block' : ''
-                }`}
-              >
-                <img
-                  src={item.url}
-                  alt={`Instagram ${idx + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                {item.tag && (
-                  <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-amber-300 text-charcoal font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded shadow-xs">
-                    {item.tag}
+            {/* On mobile: up to 3 images fitting viewport. On desktop: up to 7 */}
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5">
+              {igPhotos.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`aspect-square sm:aspect-[3/4] rounded-lg sm:rounded-xl overflow-hidden border border-border group relative bg-beige ${
+                    idx >= 3 ? 'hidden lg:block' : ''
+                  }`}
+                >
+                  <img
+                    src={item.url}
+                    alt={`Instagram ${idx + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {item.tag && (
+                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-amber-300 text-charcoal font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded shadow-xs">
+                      {item.tag}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-wine/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                    <Instagram size={20} />
                   </div>
-                )}
-                <div className="absolute inset-0 bg-wine/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                  <Instagram size={20} />
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="pt-1">
-            <a
-              href="https://instagram.com"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 border border-gold text-charcoal text-[11px] sm:text-xs uppercase font-bold tracking-widest px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-gold hover:text-white transition-colors shadow-2xs"
-            >
-              <span>FOLLOW US ON INSTAGRAM</span>
-            </a>
-          </div>
-        </section>
+            <div className="pt-1">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 border border-gold text-charcoal text-[11px] sm:text-xs uppercase font-bold tracking-widest px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-gold hover:text-white transition-colors shadow-2xs"
+              >
+                <span>FOLLOW US ON INSTAGRAM</span>
+              </a>
+            </div>
+          </section>
+        )}
 
         {/* ═══════════════════════════════════════════════════
             7. VALUE PROPOSITIONS STRIP (5 Features) — Desktop/Laptop Only

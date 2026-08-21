@@ -242,7 +242,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_number ON public.orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON public.reviews(product_id);
 
--- ROW LEVEL SECURITY (RLS)
+-- ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -261,41 +261,47 @@ ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
--- PUBLIC READ POLICIES
-CREATE POLICY "Public categories are viewable by everyone" ON public.categories FOR SELECT USING (is_active = TRUE);
-CREATE POLICY "Public products are viewable by everyone" ON public.products FOR SELECT USING (status = 'published');
-CREATE POLICY "Public product variants are viewable by everyone" ON public.product_variants FOR SELECT USING (TRUE);
-CREATE POLICY "Public product images are viewable by everyone" ON public.product_images FOR SELECT USING (TRUE);
-CREATE POLICY "Public banners are viewable by everyone" ON public.banners FOR SELECT USING (is_active = TRUE);
-CREATE POLICY "Public announcements are viewable by everyone" ON public.announcements FOR SELECT USING (is_active = TRUE);
-CREATE POLICY "Approved reviews are viewable by everyone" ON public.reviews FOR SELECT USING (is_approved = TRUE);
-CREATE POLICY "Store settings are viewable by everyone" ON public.store_settings FOR SELECT USING (TRUE);
+-- 1. Profiles
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (TRUE);
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (TRUE);
 
--- AUTHENTICATED USER POLICIES
-CREATE POLICY "Users can manage own profile" ON public.profiles FOR ALL USING (auth.uid() = id);
+-- 2. Banners & Marketing
+CREATE POLICY "Allow public read banners" ON public.banners FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify banners" ON public.banners FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read announcements" ON public.announcements FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify announcements" ON public.announcements FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+-- 3. Catalog (Categories, Products, Images, Variants)
+CREATE POLICY "Allow public read categories" ON public.categories FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify categories" ON public.categories FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read products" ON public.products FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify products" ON public.products FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read product_images" ON public.product_images FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify product_images" ON public.product_images FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read product_variants" ON public.product_variants FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify product_variants" ON public.product_variants FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+-- 4. Store Settings, Coupons & Reviews
+CREATE POLICY "Allow public read store_settings" ON public.store_settings FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify store_settings" ON public.store_settings FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read coupons" ON public.coupons FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify coupons" ON public.coupons FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read reviews" ON public.reviews FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify reviews" ON public.reviews FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+-- 5. Orders & User Data
+CREATE POLICY "Allow public read orders" ON public.orders FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify orders" ON public.orders FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read order_items" ON public.order_items FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify order_items" ON public.order_items FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
 CREATE POLICY "Users can manage own wishlist" ON public.wishlists FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage own addresses" ON public.addresses FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can view own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);
-
--- ADMIN POLICIES (Full control for role = admin)
-CREATE POLICY "Admins have full access to all profiles" ON public.profiles FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to categories" ON public.categories FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to products" ON public.products FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to variants" ON public.product_variants FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to images" ON public.product_images FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to banners" ON public.banners FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "Admins have full access to orders" ON public.orders FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-);

@@ -13,7 +13,8 @@ import {
   Image as ImageIcon,
   Upload,
   Link as LinkIcon,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -21,7 +22,7 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [imageTab, setImageTab] = useState<'url' | 'upload'>('url')
+  const [uploading, setUploading] = useState(false)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
 
   const [editingCategory, setEditingCategory] = useState<Partial<Category>>({
@@ -36,45 +37,91 @@ export default function AdminCategoriesPage() {
 
   const loadCategories = async () => {
     setLoading(true)
-    const data = await getAllCategories()
-    setCategories(data)
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/categories')
+      const data = await res.json()
+      if (Array.isArray(data)) setCategories(data)
+      else {
+        const local = await getAllCategories()
+        setCategories(local)
+      }
+    } catch (e) {
+      const local = await getAllCategories()
+      setCategories(local)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     loadCategories()
   }, [])
 
-  // Handle local file selection from computer gallery
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload local file to Cloudinary and set CDN URL
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64Data = reader.result as string
-        setUploadPreview(base64Data)
-        setEditingCategory(prev => ({ ...prev, image_url: base64Data }))
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'categories')
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.url) {
+        setUploadPreview(data.url)
+        setEditingCategory(prev => ({ ...prev, image_url: data.url }))
+      } else {
+        alert(data.error || 'Failed to upload image to Cloudinary')
       }
-      reader.readAsDataURL(file)
+    } catch (err: any) {
+      alert(err.message || 'Image upload failed. Please verify Cloudinary credentials.')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingCategory.name) return
-    await saveCategory({
+    setLoading(true)
+    const payload = {
       ...editingCategory,
       slug: editingCategory.slug || editingCategory.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    })
-    setIsModalOpen(false)
-    setUploadPreview(null)
-    loadCategories()
+    }
+    try {
+      await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      await saveCategory(payload)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsModalOpen(false)
+      setUploadPreview(null)
+      loadCategories()
+    }
   }
 
   const handleDelete = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete category "${name}"? Products in this category will become uncategorized.`)) {
-      await deleteCategory(id)
-      loadCategories()
+      setLoading(true)
+      try {
+        await fetch(`/api/admin/categories?id=${id}`, { method: 'DELETE' })
+        await deleteCategory(id)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        loadCategories()
+      }
     }
   }
 
@@ -271,11 +318,11 @@ export default function AdminCategoriesPage() {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {/* Option 2: Upload Image from Gallery */}
+                {/* Option 2: Upload Image to Cloudinary */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5 text-mid font-medium mb-1">
                     <Upload size={12} className="text-gold" />
-                    <span>Option 2: Upload from Gallery</span>
+                    <span>Option 2: Upload to Cloudinary</span>
                   </div>
                   <input
                     type="file"
@@ -286,12 +333,26 @@ export default function AdminCategoriesPage() {
                   />
                   <button
                     type="button"
+                    disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-3 px-4 border-2 border-dashed border-border hover:border-gold bg-white rounded-lg flex flex-col items-center justify-center gap-1 text-mid hover:text-charcoal transition-all"
+                    className={`w-full py-3 px-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-all ${
+                      uploading
+                        ? 'border-gold bg-gold/5 opacity-80 cursor-wait'
+                        : 'border-border hover:border-gold bg-white text-mid hover:text-charcoal'
+                    }`}
                   >
-                    <Upload size={18} className="text-gold" />
-                    <span className="font-semibold text-xs text-charcoal">Select Image from Computer</span>
-                    <span className="text-[10px] text-mid">PNG, JPG, or WEBP supported</span>
+                    {uploading ? (
+                      <>
+                        <Loader2 size={18} className="text-gold animate-spin" />
+                        <span className="font-semibold text-xs text-charcoal">Uploading to Cloudinary CDN...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={18} className="text-gold" />
+                        <span className="font-semibold text-xs text-charcoal">Select Image from Computer</span>
+                        <span className="text-[10px] text-mid">PNG, JPG, or WEBP • Uploads directly to Cloudinary</span>
+                      </>
+                    )}
                   </button>
                 </div>
 

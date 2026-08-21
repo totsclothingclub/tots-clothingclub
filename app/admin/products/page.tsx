@@ -28,13 +28,23 @@ export default function AdminProductsPage() {
 
   const loadData = async () => {
     setLoading(true)
-    const [prods, cats] = await Promise.all([
-      getAllAdminProducts(),
-      getCategories()
-    ])
-    setProducts(prods)
-    setCategories(cats)
-    setLoading(false)
+    try {
+      const [prodRes, cats] = await Promise.all([
+        fetch('/api/admin/products').then(r => r.json()).catch(() => null),
+        getCategories()
+      ])
+      if (Array.isArray(prodRes)) setProducts(prodRes)
+      else {
+        const localProds = await getAllAdminProducts()
+        setProducts(localProds)
+      }
+      setCategories(cats)
+    } catch (e) {
+      const local = await getAllAdminProducts()
+      setProducts(local)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -43,8 +53,15 @@ export default function AdminProductsPage() {
 
   const handleDelete = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete product "${name}"? This action cannot be undone.`)) {
-      await deleteProduct(id)
-      loadData()
+      setLoading(true)
+      try {
+        await fetch(`/api/admin/products?id=${id}`, { method: 'DELETE' })
+        await deleteProduct(id)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        loadData()
+      }
     }
   }
 
