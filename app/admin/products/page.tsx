@@ -56,7 +56,6 @@ export default function AdminProductsPage() {
       setLoading(true)
       try {
         await fetch(`/api/admin/products?id=${id}`, { method: 'DELETE' })
-        await deleteProduct(id)
       } catch (err) {
         console.error(err)
       } finally {

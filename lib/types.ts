@@ -191,3 +191,13 @@ export interface DashboardStats {
   todaySales: number
   monthSales: number
 }
+
+export interface InstagramPost {
+  id: string
+  image_url: string
+  tag?: string
+  post_url?: string
+  display_order: number
+  is_active: boolean
+  created_at?: string
+}

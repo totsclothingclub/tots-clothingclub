@@ -98,3 +98,22 @@ DROP POLICY IF EXISTS "Allow all modify order_items" ON public.order_items;
 
 CREATE POLICY "Allow public read order_items" ON public.order_items FOR SELECT USING (TRUE);
 CREATE POLICY "Allow all modify order_items" ON public.order_items FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+-- 6. Instagram Posts Table & Policies
+CREATE TABLE IF NOT EXISTS public.instagram_posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    image_url TEXT NOT NULL,
+    tag TEXT,
+    post_url TEXT DEFAULT 'https://instagram.com/tots_clothingclub',
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.instagram_posts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read instagram_posts" ON public.instagram_posts;
+DROP POLICY IF EXISTS "Allow all modify instagram_posts" ON public.instagram_posts;
+
+CREATE POLICY "Allow public read instagram_posts" ON public.instagram_posts FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify instagram_posts" ON public.instagram_posts FOR ALL USING (TRUE) WITH CHECK (TRUE);

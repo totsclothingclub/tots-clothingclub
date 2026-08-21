@@ -220,8 +220,6 @@ function ProductEditorContent() {
         body: JSON.stringify(payload)
       })
 
-      await saveProduct(payload)
-
       router.push('/admin/products')
     } catch (err: any) {
       alert(`Error saving product: ${err.message}`)

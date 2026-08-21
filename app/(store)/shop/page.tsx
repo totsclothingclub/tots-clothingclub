@@ -183,9 +183,14 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-5">
             {products.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <div
+                key={product.id}
+                className="w-[calc(50%-6px)] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)] min-w-[145px] max-w-[285px] flex-shrink-0"
+              >
+                <ProductCard product={product} />
+              </div>
             ))}
           </div>
         )}

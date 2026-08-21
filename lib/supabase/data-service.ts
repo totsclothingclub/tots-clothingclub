@@ -10,7 +10,8 @@ import {
   Order,
   DashboardStats,
   ProductImage,
-  ProductVariant
+  ProductVariant,
+  InstagramPost
 } from '../types'
 
 // Dynamic default state
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
 let storeSettings: StoreSettings = { ...DEFAULT_SETTINGS }
 let announcements: Announcement[] = []
 let banners: Banner[] = []
+let instagramPosts: InstagramPost[] = []
 let categories: Category[] = []
 let products: Product[] = []
 let coupons: Coupon[] = []
@@ -206,6 +208,115 @@ export async function deleteBanner(id: string): Promise<boolean> {
     }
   }
   banners = banners.filter(b => b.id !== id)
+  return true
+}
+
+// -------------------------------------------------------------
+// INSTAGRAM GALLERY (Cloudinary + Supabase)
+// -------------------------------------------------------------
+export async function getInstagramPosts(): Promise<InstagramPost[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('instagram_posts')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+      if (!error && data) return data as InstagramPost[]
+    } catch (e) {
+      console.warn('Supabase getInstagramPosts failed', e)
+    }
+  }
+  return instagramPosts.filter(p => p.is_active).sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function getAllInstagramPosts(): Promise<InstagramPost[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('instagram_posts')
+        .select('*')
+        .order('display_order', { ascending: true })
+      if (!error && data) {
+        instagramPosts = data as InstagramPost[]
+        return instagramPosts
+      }
+    } catch (e) {
+      console.warn('Supabase getAllInstagramPosts failed', e)
+    }
+  }
+  return instagramPosts.sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function saveInstagramPost(postData: Partial<InstagramPost>): Promise<InstagramPost> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const payload = {
+        image_url: postData.image_url || '/images/placeholder.jpg',
+        tag: postData.tag || null,
+        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+        display_order: Number(postData.display_order) || 1,
+        is_active: postData.is_active ?? true
+      }
+
+      if (postData.id && !postData.id.startsWith('ig-')) {
+        const { data, error } = await supabase
+          .from('instagram_posts')
+          .update(payload)
+          .eq('id', postData.id)
+          .select()
+          .single()
+        if (!error && data) {
+          instagramPosts = instagramPosts.map(p => (p.id === data.id ? (data as InstagramPost) : p))
+          return data as InstagramPost
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('instagram_posts')
+          .insert([payload])
+          .select()
+          .single()
+        if (!error && data) {
+          instagramPosts.push(data as InstagramPost)
+          return data as InstagramPost
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase saveInstagramPost failed', e)
+    }
+  }
+
+  // Fallback in-memory
+  if (postData.id) {
+    instagramPosts = instagramPosts.map(p => (p.id === postData.id ? ({ ...p, ...postData } as InstagramPost) : p))
+    return instagramPosts.find(p => p.id === postData.id)!
+  } else {
+    const newPost: InstagramPost = {
+      id: `ig-${Date.now()}`,
+      image_url: postData.image_url || '/images/placeholder.jpg',
+      tag: postData.tag,
+      post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+      display_order: Number(postData.display_order) || instagramPosts.length + 1,
+      is_active: postData.is_active ?? true
+    }
+    instagramPosts.push(newPost)
+    return newPost
+  }
+}
+
+export async function deleteInstagramPost(id: string): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      await supabase.from('instagram_posts').delete().eq('id', id)
+    } catch (e) {
+      console.warn('Supabase deleteInstagramPost failed', e)
+    }
+  }
+  instagramPosts = instagramPosts.filter(p => p.id !== id)
   return true
 }
 

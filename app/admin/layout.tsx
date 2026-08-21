@@ -22,7 +22,8 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Instagram
 } from 'lucide-react'
 
 interface NavGroup {
@@ -43,7 +44,7 @@ const navGroups: NavGroup[] = [
     ]
   },
   {
-    title: 'CATALOG',
+    title: 'STORE CATALOG',
     items: [
       { label: 'Products', href: '/admin/products', icon: ShoppingBag },
       { label: 'Add Product', href: '/admin/products/editor', icon: PlusCircle },
@@ -67,6 +68,7 @@ const navGroups: NavGroup[] = [
     title: 'MARKETING & CONTENT',
     items: [
       { label: 'Hero Banners', href: '/admin/banners', icon: ImageIcon },
+      { label: 'Seen on Instagram', href: '/admin/instagram', icon: Instagram },
       { label: 'Coupons', href: '/admin/coupons', icon: Ticket }
     ]
   },
@@ -92,6 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname.includes('/admin/customers')) return 'Customers'
     if (pathname.includes('/admin/reviews')) return 'Reviews'
     if (pathname.includes('/admin/banners')) return 'Banners & Marketing'
+    if (pathname.includes('/admin/instagram')) return 'Seen on Instagram'
     if (pathname.includes('/admin/coupons')) return 'Coupons'
     if (pathname.includes('/admin/settings')) return 'Store Settings'
     return 'Dashboard'

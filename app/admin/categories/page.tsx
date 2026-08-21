@@ -101,7 +101,6 @@ export default function AdminCategoriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      await saveCategory(payload)
     } catch (err) {
       console.error(err)
     } finally {
@@ -116,7 +115,6 @@ export default function AdminCategoriesPage() {
       setLoading(true)
       try {
         await fetch(`/api/admin/categories?id=${id}`, { method: 'DELETE' })
-        await deleteCategory(id)
       } catch (err) {
         console.error(err)
       } finally {
@@ -157,16 +155,23 @@ export default function AdminCategoriesPage() {
       </div>
 
       {/* ── Category Cards Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex flex-wrap gap-4">
         {loading ? (
-          <div className="col-span-full py-12 text-center text-xs text-mid">
+          <div className="w-full py-12 text-center text-xs text-mid">
             Loading categories...
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="w-full bg-white p-12 rounded-xl border border-border text-center space-y-3">
+            <h3 className="font-serif text-lg font-semibold text-charcoal">No Categories Created Yet</h3>
+            <p className="text-xs text-mid max-w-sm mx-auto">
+              Add your first store category to organize dresses, kurta sets, western wear, or plus size collections.
+            </p>
           </div>
         ) : (
           categories.map(cat => (
             <div
               key={cat.id}
-              className="bg-white rounded-xl border border-border overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+              className="bg-white rounded-xl border border-border overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between w-full sm:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] min-w-[220px] max-w-[320px]"
             >
               <div className="relative aspect-[4/3] bg-beige overflow-hidden">
                 <img

@@ -100,6 +100,17 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. INSTAGRAM GALLERY
+CREATE TABLE IF NOT EXISTS public.instagram_posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    image_url TEXT NOT NULL,
+    tag TEXT,
+    post_url TEXT DEFAULT 'https://instagram.com/tots_clothingclub',
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 7. WISHLIST
 CREATE TABLE IF NOT EXISTS public.wishlists (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -272,6 +283,9 @@ CREATE POLICY "Allow all modify banners" ON public.banners FOR ALL USING (TRUE) 
 
 CREATE POLICY "Allow public read announcements" ON public.announcements FOR SELECT USING (TRUE);
 CREATE POLICY "Allow all modify announcements" ON public.announcements FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read instagram_posts" ON public.instagram_posts FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify instagram_posts" ON public.instagram_posts FOR ALL USING (TRUE) WITH CHECK (TRUE);
 
 -- 3. Catalog (Categories, Products, Images, Variants)
 CREATE POLICY "Allow public read categories" ON public.categories FOR SELECT USING (TRUE);

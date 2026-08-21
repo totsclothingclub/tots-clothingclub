@@ -93,7 +93,6 @@ export default function AdminBannersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingBanner)
       })
-      await saveBanner(editingBanner)
     } catch (err) {
       console.error(err)
     } finally {
@@ -107,7 +106,6 @@ export default function AdminBannersPage() {
       setLoading(true)
       try {
         await fetch(`/api/admin/banners?id=${id}`, { method: 'DELETE' })
-        await deleteBanner(id)
       } catch (err) {
         console.error(err)
       } finally {
