@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="w-full max-w-full overflow-x-hidden">
-      <body className="bg-cream text-charcoal min-h-screen flex flex-col antialiased w-full max-w-full overflow-x-hidden" style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}>
+    <html lang="en">
+      <body className="bg-cream text-charcoal min-h-screen flex flex-col antialiased" style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}>
         <CartProvider>
           <WishlistProvider>
             {children}
