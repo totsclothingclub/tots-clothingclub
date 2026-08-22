@@ -58,10 +58,10 @@ export default async function HomePage() {
         }))
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30">
       <Header initialCategories={categories} />
 
-      <main className="flex-1 space-y-12 lg:space-y-16 pb-16 w-full max-w-full overflow-x-hidden">
+      <main className="flex-1 space-y-12 lg:space-y-16 pb-16">
         
         {/* ═══════════════════════════════════════════════════
             1. HERO SLIDER SECTION (Functional Desktop & Mobile Slider)
