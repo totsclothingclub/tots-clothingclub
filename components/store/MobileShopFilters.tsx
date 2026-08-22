@@ -12,6 +12,7 @@ interface MobileShopFiltersProps {
   currentSort: string
   productsCount: number
   sizeOptions: string[]
+  isPlusSizeSection?: boolean
 }
 
 export default function MobileShopFilters({
@@ -21,7 +22,9 @@ export default function MobileShopFilters({
   currentSort,
   productsCount,
   sizeOptions,
+  isPlusSizeSection = false,
 }: MobileShopFiltersProps) {
+
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -29,6 +32,38 @@ export default function MobileShopFilters({
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [showSizeModal, setShowSizeModal] = useState(false)
   const [tempSizes, setTempSizes] = useState<string[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<'shop' | 'plus_size'>(
+    isPlusSizeSection ? 'plus_size' : 'shop'
+  )
+
+  useEffect(() => {
+    setSelectedGroup(isPlusSizeSection ? 'plus_size' : 'shop')
+  }, [isPlusSizeSection, currentCategorySlug])
+
+  const shopParent = categories.find(c => c.slug === 'shop')
+  const plusSizeParent = categories.find(c => c.slug === 'plus-size')
+
+  const shopCategoriesList = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'plus-size' || c.slug === 'sale') return false
+      if ((c as any).nav_location === 'shop_dropdown') return true
+      if (shopParent && (c as any).parent_id === shopParent.id) return true
+      if ((c as any).parent_id === 'cat-shop') return true
+      if (['under-199', 'under-499', '99-store', 'salwar-sets', 'chikankari', 'hijabs', 'bottoms'].includes(c.slug) && (c as any).nav_location !== 'plus_size_dropdown') return true
+      return false
+    })
+    .sort((a, b) => ((a as any).display_order || 0) - ((b as any).display_order || 0))
+
+  const plusSizeCategoriesList = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'sale' || c.slug === 'all-plus-size' || c.slug === 'plus-size') return false
+      if ((c as any).nav_location === 'plus_size_dropdown') return true
+      if (plusSizeParent && (c as any).parent_id === plusSizeParent.id) return true
+      if ((c as any).parent_id === 'cat-plus-size') return true
+      if (['modest-wear', 'salwar', 'daily-wear', 'plus-size-bottoms'].includes(c.slug)) return true
+      return false
+    })
+    .sort((a, b) => ((a as any).display_order || 0) - ((b as any).display_order || 0))
 
   // Load current sizes into temp state when opening the Size panel
   useEffect(() => {
@@ -202,32 +237,92 @@ export default function MobileShopFilters({
               {/* Category Filter */}
               <div className="space-y-3">
                 <h4 className="text-[11px] font-bold uppercase tracking-widest text-gold">Category</h4>
-                <div className="space-y-1">
-                  <Link
-                    href={buildCategoryUrl(null)}
-                    onClick={() => setShowFilterPanel(false)}
-                    className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                      currentCategorySlug === 'all'
-                        ? 'text-wine font-bold'
-                        : 'text-charcoal'
+                
+                {/* Segmented Category Group Switcher: [ SHOP ] [ PLUS SIZE ] */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-beige/60 rounded-xl border border-border/80">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGroup('shop')}
+                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${
+                      selectedGroup === 'shop'
+                        ? 'bg-charcoal text-cream shadow-xs'
+                        : 'text-charcoal hover:bg-white/60'
                     }`}
                   >
-                    All Products
-                  </Link>
-                  {categories.map(cat => (
-                    <Link
-                      key={cat.id}
-                      href={buildCategoryUrl(cat.slug)}
-                      onClick={() => setShowFilterPanel(false)}
-                      className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                        currentCategorySlug === cat.slug
-                          ? 'text-wine font-bold'
-                          : 'text-charcoal'
-                      }`}
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
+                    SHOP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGroup('plus_size')}
+                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${
+                      selectedGroup === 'plus_size'
+                        ? 'bg-charcoal text-cream shadow-xs'
+                        : 'text-charcoal hover:bg-white/60'
+                    }`}
+                  >
+                    PLUS SIZE
+                  </button>
+                </div>
+
+                {/* Dynamic Category List based on Selected Group */}
+                <div className="space-y-1 pt-1">
+                  {selectedGroup === 'shop' ? (
+                    <>
+                      <Link
+                        href={buildCategoryUrl(null)}
+                        onClick={() => setShowFilterPanel(false)}
+                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
+                          currentCategorySlug === 'all'
+                            ? 'text-wine font-bold'
+                            : 'text-charcoal'
+                        }`}
+                      >
+                        All Products
+                      </Link>
+                      {shopCategoriesList.map(cat => (
+                        <Link
+                          key={cat.id}
+                          href={buildCategoryUrl(cat.slug)}
+                          onClick={() => setShowFilterPanel(false)}
+                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
+                            currentCategorySlug === cat.slug
+                              ? 'text-wine font-bold'
+                              : 'text-charcoal'
+                          }`}
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={buildCategoryUrl('plus-size')}
+                        onClick={() => setShowFilterPanel(false)}
+                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
+                          currentCategorySlug === 'plus-size' || currentCategorySlug === 'all-plus-size'
+                            ? 'text-wine font-bold'
+                            : 'text-charcoal'
+                        }`}
+                      >
+                        All Plus Size
+                      </Link>
+                      {plusSizeCategoriesList.map(cat => (
+                        <Link
+                          key={cat.id}
+                          href={buildCategoryUrl(cat.slug)}
+                          onClick={() => setShowFilterPanel(false)}
+                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
+                            currentCategorySlug === cat.slug
+                              ? 'text-wine font-bold'
+                              : 'text-charcoal'
+                          }`}
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -235,9 +330,9 @@ export default function MobileShopFilters({
               <button
                 type="button"
                 onClick={() => setShowFilterPanel(false)}
-                className="w-full bg-wine text-white text-xs uppercase font-bold tracking-widest py-4 rounded-xl"
+                className="w-full bg-wine text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl hover:bg-wine-dark transition-colors shadow-sm"
               >
-                Apply Filters · {productsCount} styles
+                Apply Filters {productsCount > 0 ? `· ${productsCount} Styles` : ''}
               </button>
 
             </div>

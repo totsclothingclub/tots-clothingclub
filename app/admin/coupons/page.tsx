@@ -76,14 +76,21 @@ export default function AdminCouponsPage() {
       </div>
 
       {/* Coupons Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-wrap gap-4">
         {loading ? (
-          <div className="col-span-full py-12 text-center text-xs text-mid">Loading coupons...</div>
+          <div className="w-full py-12 text-center text-xs text-mid">Loading coupons...</div>
+        ) : coupons.length === 0 ? (
+          <div className="w-full bg-white p-12 rounded-xl border border-border text-center space-y-3">
+            <h3 className="font-serif text-lg font-semibold text-charcoal">No Discount Coupons Created</h3>
+            <p className="text-xs text-mid max-w-sm mx-auto">
+              Create promotional discount codes (e.g. 10% off or ₹200 off) for your customers to use at checkout.
+            </p>
+          </div>
         ) : (
           coupons.map(coupon => (
             <div
               key={coupon.id}
-              className="bg-white rounded-xl border border-border p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-all"
+              className="bg-white rounded-xl border border-border p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-all w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] min-w-[260px] max-w-[380px]"
             >
               <div className="flex items-start justify-between">
                 <div>

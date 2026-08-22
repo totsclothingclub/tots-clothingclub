@@ -80,7 +80,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose })
                 className="flex items-center gap-4 p-2.5 rounded-xl hover:bg-tots-beige transition-colors group"
               >
                 <img
-                  src={prod.primary_image}
+                  src={
+                    (prod.primary_image && prod.primary_image !== '/images/placeholder.jpg')
+                      ? prod.primary_image
+                      : prod.images?.[0]?.image_url || '/images/placeholder.jpg'
+                  }
                   alt={prod.name}
                   className="w-14 h-16 object-cover rounded-lg border border-tots-border"
                 />

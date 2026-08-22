@@ -47,43 +47,182 @@ export const INITIAL_BANNERS: Banner[] = [
 ]
 
 export const INITIAL_CATEGORIES: Category[] = [
+  // ── Top Level Navbar Navigation ──
   {
-    id: 'cat-1',
+    id: 'cat-new-arrivals',
     name: 'New Arrivals',
     slug: 'new-arrivals',
-    description: 'Latest luxury arrivals engineered for effortless elegance.',
-    image_url: '/images/placeholder.jpg',
+    description: 'Fresh styles and newest season luxury drops.',
+    image_url: '',
     display_order: 1,
-    is_active: true
+    is_active: true,
+    nav_location: 'navbar',
+    is_dropdown: false,
+    parent_id: null
   },
   {
-    id: 'cat-2',
+    id: 'cat-shop',
+    name: 'Shop',
+    slug: 'shop',
+    description: 'Explore our complete ready-to-wear and budget collections.',
+    image_url: '',
+    display_order: 2,
+    is_active: true,
+    nav_location: 'navbar',
+    is_dropdown: true,
+    parent_id: null
+  },
+  {
+    id: 'cat-plus-size',
     name: 'Plus Size',
     slug: 'plus-size',
-    description: 'XS to 7XL — Made for every body.',
-    image_url: '/images/placeholder.jpg',
-    display_order: 2,
-    is_active: true
-  },
-  {
-    id: 'cat-3',
-    name: 'Western Wear',
-    slug: 'western-wear',
-    description: 'Contemporary dresses, shirt dresses, and tailored tops.',
-    image_url: '/images/placeholder.jpg',
+    description: 'XS to 7XL — Size inclusive fashion crafted for every body.',
+    image_url: '',
     display_order: 3,
-    is_active: true
+    is_active: true,
+    nav_location: 'navbar',
+    is_dropdown: true,
+    parent_id: null
   },
   {
-    id: 'cat-4',
-    name: 'Salwar & Modest Wear',
-    slug: 'salwar-modest-wear',
-    description: 'Graceful abayas, kurta sets, and modest silhouettes.',
-    image_url: '/images/placeholder.jpg',
+    id: 'cat-sale',
+    name: 'Sale',
+    slug: 'sale',
+    description: 'Exclusive clearance offers, deals and festive discounts.',
+    image_url: '',
     display_order: 4,
-    is_active: true
+    is_active: true,
+    nav_location: 'navbar',
+    is_dropdown: false,
+    parent_id: null
+  },
+
+  // ── SHOP Dropdown Categories ──
+  {
+    id: 'cat-under-199',
+    name: 'Under ₹199',
+    slug: 'under-199',
+    description: 'Budget-friendly styles and essentials under ₹199.',
+    image_url: '',
+    display_order: 1,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-under-499',
+    name: 'Under ₹499',
+    slug: 'under-499',
+    description: 'Best-selling fashion and tops under ₹499.',
+    image_url: '',
+    display_order: 2,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-99-store',
+    name: '99 Store',
+    slug: '99-store',
+    description: 'Steal deals starting at just ₹99.',
+    image_url: '',
+    display_order: 3,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-salwar-sets',
+    name: 'Salwar Sets',
+    slug: 'salwar-sets',
+    description: 'Elegant stitched and unstitched salwar suits.',
+    image_url: '',
+    display_order: 4,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-chikankari',
+    name: 'Chikankari',
+    slug: 'chikankari',
+    description: 'Authentic Lucknowi handcrafted Chikankari kurtas.',
+    image_url: '',
+    display_order: 5,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-hijabs',
+    name: 'Hijabs',
+    slug: 'hijabs',
+    description: 'Premium georgette, chiffon, and cotton modal hijabs.',
+    image_url: '',
+    display_order: 6,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+  {
+    id: 'cat-bottoms',
+    name: 'Bottoms',
+    slug: 'bottoms',
+    description: 'Trousers, palazzos, leggings, and comfort pants.',
+    image_url: '',
+    display_order: 7,
+    is_active: true,
+    nav_location: 'shop_dropdown',
+    parent_id: 'cat-shop'
+  },
+
+  // ── PLUS SIZE Dropdown & Page Subcategories ──
+  {
+    id: 'cat-ps-modest',
+    name: 'Modest Wear',
+    slug: 'modest-wear',
+    description: 'Modest dresses, abayas, and full-coverage sets.',
+    image_url: '',
+    display_order: 1,
+    is_active: true,
+    nav_location: 'plus_size_dropdown',
+    parent_id: 'cat-plus-size'
+  },
+  {
+    id: 'cat-ps-salwar',
+    name: 'Salwar',
+    slug: 'salwar',
+    description: 'Plus size ethnic salwar suits and kurta sets.',
+    image_url: '',
+    display_order: 2,
+    is_active: true,
+    nav_location: 'plus_size_dropdown',
+    parent_id: 'cat-plus-size'
+  },
+  {
+    id: 'cat-ps-daily',
+    name: 'Daily Wear',
+    slug: 'daily-wear',
+    description: 'Comfortable everyday tops, kurtis, and tunics.',
+    image_url: '',
+    display_order: 3,
+    is_active: true,
+    nav_location: 'plus_size_dropdown',
+    parent_id: 'cat-plus-size'
+  },
+  {
+    id: 'cat-ps-bottoms',
+    name: 'Bottoms',
+    slug: 'plus-size-bottoms',
+    description: 'Stretchable and plus size tailored bottoms.',
+    image_url: '',
+    display_order: 4,
+    is_active: true,
+    nav_location: 'plus_size_dropdown',
+    parent_id: 'cat-plus-size'
   }
 ]
+
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
