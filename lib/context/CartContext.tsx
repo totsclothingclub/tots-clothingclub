@@ -52,12 +52,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [items, isHydrated])
 
   const addItem = (product: Product, variant: ProductVariant, quantity = 1) => {
+    const addQty = Math.max(1, Number(quantity) || 1)
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => item.product.id === product.id && item.variant.id === variant.id)
+      const existingIndex = prev.findIndex(
+        item => item.product.id === product.id && item.variant.id === variant.id
+      )
       if (existingIndex > -1) {
-        const next = [...prev]
-        next[existingIndex].quantity += quantity
-        return next
+        return prev.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, quantity: item.quantity + addQty }
+            : item
+        )
       } else {
         return [
           ...prev,
@@ -65,7 +70,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: `${product.id}-${variant.id}`,
             product,
             variant,
-            quantity
+            quantity: addQty
           }
         ]
       }

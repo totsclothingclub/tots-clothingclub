@@ -11,8 +11,10 @@ import {
   Menu,
   X,
   ChevronDown,
+  ChevronRight,
   Instagram,
-  Truck
+  Truck,
+  Sparkles
 } from 'lucide-react'
 import { useCart } from '@/lib/context/CartContext'
 import { useWishlist } from '@/lib/context/WishlistContext'
@@ -34,7 +36,16 @@ export function Header({ initialCategories }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+
+  // Desktop active dropdown state (for hover + click support)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Mobile accordion state
+  const [mobileExpanded, setMobileExpanded] = useState<{ [key: string]: boolean }>({
+    shop: false,
+    plusSize: false
+  })
 
   // Dynamic category fetching from database/Admin
   useEffect(() => {
@@ -54,6 +65,87 @@ export function Header({ initialCategories }: HeaderProps) {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
+
+  // Close dropdown on pathname change or escape
+  useEffect(() => {
+    setOpenDropdown(null)
+    setMobileOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenDropdown(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Organize categories dynamically
+  const shopParent = categories.find(c => c.slug === 'shop')
+  const plusSizeParent = categories.find(c => c.slug === 'plus-size')
+
+  const shopCategories = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'plus-size' || c.slug === 'sale') return false
+      if (c.nav_location === 'shop_dropdown') return true
+      if (shopParent && c.parent_id === shopParent.id) return true
+      if (c.parent_id === 'cat-shop') return true
+      if (['under-199', 'under-499', '99-store', 'salwar-sets', 'chikankari', 'hijabs'].includes(c.slug)) return true
+      if (c.slug === 'bottoms' && c.nav_location !== 'plus_size_dropdown') return true
+      return !c.nav_location || c.nav_location === 'none'
+    })
+    .sort((a, b) => a.display_order - b.display_order)
+
+  const plusSizeCategories = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'sale' || c.slug === 'all-plus-size' || c.slug === 'plus-size') return false
+      if (c.nav_location === 'plus_size_dropdown') return true
+      if (plusSizeParent && c.parent_id === plusSizeParent.id) return true
+      if (c.parent_id === 'cat-plus-size') return true
+      if (['modest-wear', 'salwar', 'daily-wear', 'plus-size-bottoms'].includes(c.slug)) return true
+      return false
+    })
+    .sort((a, b) => a.display_order - b.display_order)
+
+  // Custom top-level categories that aren't the standard 4
+  const customTopNavCategories = categories
+    .filter(c => c.nav_location === 'navbar' && !['new-arrivals', 'shop', 'plus-size', 'sale'].includes(c.slug))
+    .sort((a, b) => a.display_order - b.display_order)
+
+  const handleMouseEnter = (menuKey: string) => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current)
+    setOpenDropdown(menuKey)
+  }
+
+  const handleMouseLeave = () => {
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setOpenDropdown(null)
+    }, 150)
+  }
+
+  const toggleDropdown = (menuKey: string) => {
+    setOpenDropdown(prev => (prev === menuKey ? null : menuKey))
+  }
+
+  const toggleMobileSection = (key: string) => {
+    setMobileExpanded(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const getCategoryHref = (cat: Category) => {
+    if (cat.slug === 'all-plus-size' || cat.slug === 'plus-size') {
+      return '/shop?category=plus-size'
+    }
+    if (cat.slug === 'under-199') {
+      return '/shop?category=under-199&maxPrice=199'
+    }
+    if (cat.slug === 'under-499') {
+      return '/shop?category=under-499&maxPrice=499'
+    }
+    if (cat.slug === '99-store') {
+      return '/shop?category=99-store&maxPrice=99'
+    }
+    return `/shop?category=${cat.slug}`
+  }
 
   return (
     <>
@@ -160,12 +252,11 @@ export function Header({ initialCategories }: HeaderProps) {
             </div>
 
             {/* ══════════════════════════════════════════════
-                DESKTOP VIEW: Logo (LEFT) | Categories (CENTERED) | Icons (RIGHT)
-                All vertically centered on the exact same center line
+                DESKTOP VIEW: Logo (LEFT) | Navigation: NEW ARRIVALS | SHOP ▼ | PLUS SIZE ▼ | SALE (CENTERED) | Icons (RIGHT)
             ══════════════════════════════════════════════ */}
             <div className="hidden lg:flex items-center justify-between w-full">
               
-              {/* Desktop Logo (slightly from left edge) */}
+              {/* Desktop Logo (Left edge) */}
               <div className="flex items-center justify-start min-w-[160px] ml-4 lg:ml-8 xl:ml-12">
                 <Link href="/" className="flex items-center group">
                   <img
@@ -176,15 +267,137 @@ export function Header({ initialCategories }: HeaderProps) {
                 </Link>
               </div>
 
-              {/* Desktop Centered Category Navigation */}
-              <nav className="flex items-center justify-center gap-7 xl:gap-8 mx-auto">
-                {categories.map((cat) => (
+              {/* Desktop Centered Dynamic Navbar Navigation */}
+              <nav className="flex items-center justify-center gap-6 xl:gap-8 mx-auto relative">
+                
+                {/* 1. NEW ARRIVALS */}
+                <Link
+                  href="/shop?category=new-arrivals"
+                  className={`text-xs uppercase tracking-[0.18em] font-semibold transition-colors hover:text-gold ${
+                    pathname === '/shop?category=new-arrivals'
+                      ? 'text-gold'
+                      : 'text-cream/90'
+                  }`}
+                >
+                  NEW ARRIVALS
+                </Link>
+
+                {/* 2. SHOP ▼ (Dynamic Dropdown) */}
+                <div
+                  className="relative"
+                  onMouseEnter={() => handleMouseEnter('shop')}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleDropdown('shop')}
+                    className={`flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-semibold transition-colors hover:text-gold py-2 ${
+                      openDropdown === 'shop' || (pathname === '/shop' && !pathname.includes('category=plus-size'))
+                        ? 'text-gold'
+                        : 'text-cream/90'
+                    }`}
+                    aria-expanded={openDropdown === 'shop'}
+                  >
+                    <span>SHOP</span>
+                    <ChevronDown
+                      size={13}
+                      className={`transition-transform duration-200 ${
+                        openDropdown === 'shop' ? 'rotate-180 text-gold' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* SHOP Dropdown Menu */}
+                  <div
+                    className={`absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50 transition-all duration-200 ease-out origin-top ${
+                      openDropdown === 'shop'
+                        ? 'opacity-100 translate-y-0 pointer-events-auto visible scale-100'
+                        : 'opacity-0 -translate-y-2 pointer-events-none invisible scale-95'
+                    }`}
+                  >
+                    <div className="bg-[#181818] border border-[#2b2b2b] rounded-xl shadow-2xl py-2.5 px-1.5 min-w-[210px] backdrop-blur-md">
+                      <div className="space-y-0.5">
+                        {shopCategories.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            href={getCategoryHref(cat)}
+                            onClick={() => setOpenDropdown(null)}
+                            className="flex items-center justify-between px-4 py-2 text-xs font-medium uppercase tracking-wider text-cream/80 hover:text-gold hover:bg-[#242424] rounded-lg transition-colors group/item"
+                          >
+                            <span>{cat.name}</span>
+                            <ChevronRight
+                              size={12}
+                              className="opacity-0 -translate-x-1 group-hover/item:opacity-100 group-hover/item:translate-x-0 transition-all text-gold"
+                            />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. PLUS SIZE ▼ (Dynamic Dropdown) */}
+                <div
+                  className="relative"
+                  onMouseEnter={() => handleMouseEnter('plus-size')}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleDropdown('plus-size')}
+                    className={`flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] font-semibold transition-colors hover:text-gold py-2 ${
+                      openDropdown === 'plus-size' || pathname.includes('category=plus-size')
+                        ? 'text-gold'
+                        : 'text-cream/90'
+                    }`}
+                    aria-expanded={openDropdown === 'plus-size'}
+                  >
+                    <span>PLUS SIZE</span>
+                    <ChevronDown
+                      size={13}
+                      className={`transition-transform duration-200 ${
+                        openDropdown === 'plus-size' ? 'rotate-180 text-gold' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* PLUS SIZE Dropdown Menu */}
+                  <div
+                    className={`absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50 transition-all duration-200 ease-out origin-top ${
+                      openDropdown === 'plus-size'
+                        ? 'opacity-100 translate-y-0 pointer-events-auto visible scale-100'
+                        : 'opacity-0 -translate-y-2 pointer-events-none invisible scale-95'
+                    }`}
+                  >
+                    <div className="bg-[#181818] border border-[#2b2b2b] rounded-xl shadow-2xl py-2.5 px-1.5 min-w-[210px] backdrop-blur-md">
+                      <div className="space-y-0.5">
+                        {plusSizeCategories.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            href={getCategoryHref(cat)}
+                            onClick={() => setOpenDropdown(null)}
+                            className="flex items-center justify-between px-4 py-2 text-xs font-medium uppercase tracking-wider text-cream/80 hover:text-gold hover:bg-[#242424] rounded-lg transition-colors group/item"
+                          >
+                            <span>{cat.name}</span>
+                            <ChevronRight
+                              size={12}
+                              className="opacity-0 -translate-x-1 group-hover/item:opacity-100 group-hover/item:translate-x-0 transition-all text-gold"
+                            />
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Custom Top Nav Categories from Admin (if any) */}
+                {customTopNavCategories.map(cat => (
                   <Link
                     key={cat.id}
                     href={`/shop?category=${cat.slug}`}
-                    className={`text-xs uppercase tracking-[0.18em] font-medium transition-colors hover:text-gold ${
+                    className={`text-xs uppercase tracking-[0.18em] font-semibold transition-colors hover:text-gold ${
                       pathname === `/shop?category=${cat.slug}`
-                        ? 'text-gold font-semibold'
+                        ? 'text-gold'
                         : 'text-cream/90'
                     }`}
                   >
@@ -192,18 +405,17 @@ export function Header({ initialCategories }: HeaderProps) {
                   </Link>
                 ))}
 
-                {/* Always active clearance sale link if not already in categories */}
-                {!categories.some(c => c.slug === 'sale') && (
-                  <Link
-                    href="/shop?isSale=true"
-                    className="text-xs uppercase tracking-[0.18em] font-semibold text-rose-400 hover:text-rose-300 transition-colors"
-                  >
-                    SALE
-                  </Link>
-                )}
+                {/* 5. SALE */}
+                <Link
+                  href="/shop?isSale=true"
+                  className="text-xs uppercase tracking-[0.18em] font-bold text-rose-400 hover:text-rose-300 transition-colors"
+                >
+                  SALE
+                </Link>
+
               </nav>
 
-              {/* Desktop Right Icons (RIGHT) */}
+              {/* Desktop Right Icons */}
               <div className="flex items-center justify-end gap-5 text-cream min-w-[160px]">
                 <button
                   onClick={() => setSearchOpen(true)}
@@ -254,7 +466,7 @@ export function Header({ initialCategories }: HeaderProps) {
         </div>
       </header>
 
-      {/* ── Mobile Drawer (Uses Dynamic Categories from Admin) ── */}
+      {/* ── Mobile Drawer (Uses Dynamic Categories & Hierarchy from Admin) ── */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
@@ -281,21 +493,98 @@ export function Header({ initialCategories }: HeaderProps) {
               </button>
             </div>
 
-            {/* Dynamic Category List */}
-            <nav className="flex-1 overflow-y-auto px-6 py-6 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gold mb-3">
-                Categories
+            {/* Dynamic Hierarchy Navigation */}
+            <nav className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gold mb-2">
+                Navigation
               </p>
-              
+
+              {/* 1. NEW ARRIVALS */}
               <Link
-                href="/shop"
+                href="/shop?category=new-arrivals"
                 onClick={() => setMobileOpen(false)}
                 className="block py-2.5 text-sm font-semibold uppercase tracking-wider text-cream hover:text-gold border-b border-[#222222]"
               >
-                All Products
+                NEW ARRIVALS
               </Link>
 
-              {categories.map((cat) => (
+              {/* 2. SHOP (Accordion) */}
+              <div className="border-b border-[#222222] pb-1">
+                <button
+                  type="button"
+                  onClick={() => toggleMobileSection('shop')}
+                  className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none group"
+                >
+                  <span className="text-sm font-semibold uppercase tracking-wider text-cream group-hover:text-gold">
+                    SHOP
+                  </span>
+                  <div className="p-1.5 text-gray-400 group-hover:text-gold transition-colors">
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        mobileExpanded.shop ? 'rotate-180 text-gold' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {mobileExpanded.shop && (
+                  <div className="pl-3 pb-3 space-y-2 animate-fadein border-l border-gold/30 ml-2 mt-1">
+                    {/* Dynamic categories from shop dropdown */}
+                    {shopCategories.map(cat => (
+                      <Link
+                        key={cat.id}
+                        href={getCategoryHref(cat)}
+                        onClick={() => setMobileOpen(false)}
+                        className="block py-1 text-xs font-medium uppercase tracking-wider text-gray-300 hover:text-gold"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. PLUS SIZE (Accordion) */}
+              <div className="border-b border-[#222222] pb-1">
+                <button
+                  type="button"
+                  onClick={() => toggleMobileSection('plusSize')}
+                  className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none group"
+                >
+                  <span className="text-sm font-semibold uppercase tracking-wider text-cream group-hover:text-gold">
+                    PLUS SIZE
+                  </span>
+                  <div className="p-1.5 text-gray-400 group-hover:text-gold transition-colors">
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        mobileExpanded.plusSize ? 'rotate-180 text-gold' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {mobileExpanded.plusSize && (
+                  <div className="pl-3 pb-3 space-y-2 animate-fadein border-l border-gold/30 ml-2 mt-1">
+                    {plusSizeCategories
+                      .filter(cat => cat.slug !== 'all-plus-size' && cat.slug !== 'plus-size')
+                      .map(cat => (
+                        <Link
+                          key={cat.id}
+                          href={getCategoryHref(cat)}
+                          onClick={() => setMobileOpen(false)}
+                          className="block py-1 text-xs font-medium uppercase tracking-wider text-gray-300 hover:text-gold"
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Custom Top Nav items */}
+              {customTopNavCategories.map(cat => (
                 <Link
                   key={cat.id}
                   href={`/shop?category=${cat.slug}`}
@@ -306,12 +595,13 @@ export function Header({ initialCategories }: HeaderProps) {
                 </Link>
               ))}
 
+              {/* 5. SALE */}
               <Link
                 href="/shop?isSale=true"
                 onClick={() => setMobileOpen(false)}
-                className="block py-2.5 text-sm font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300"
+                className="block py-2.5 text-sm font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300 border-b border-[#222222]"
               >
-                Sale & Clearance
+                SALE & CLEARANCE
               </Link>
             </nav>
 

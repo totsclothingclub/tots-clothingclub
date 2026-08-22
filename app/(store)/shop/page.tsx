@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 interface ShopPageProps {
@@ -38,6 +39,37 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const searchQuery         = searchParams.search   || ''
   const isSaleOnly          = searchParams.isSale   === 'true'
 
+  // Dynamic category groups
+  const shopParent = categories.find(c => c.slug === 'shop')
+  const plusSizeParent = categories.find(c => c.slug === 'plus-size')
+
+  const shopCategories = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'plus-size' || c.slug === 'sale') return false
+      if (c.nav_location === 'shop_dropdown') return true
+      if (shopParent && c.parent_id === shopParent.id) return true
+      if (c.parent_id === 'cat-shop') return true
+      if (['under-199', 'under-499', '99-store', 'salwar-sets', 'chikankari', 'hijabs'].includes(c.slug)) return true
+      if (c.slug === 'bottoms' && c.nav_location !== 'plus_size_dropdown') return true
+      return !c.nav_location || c.nav_location === 'none'
+    })
+    .sort((a, b) => a.display_order - b.display_order)
+
+  const plusSizeCategories = categories
+    .filter(c => {
+      if (c.slug === 'new-arrivals' || c.slug === 'shop' || c.slug === 'sale' || c.slug === 'all-plus-size' || c.slug === 'plus-size') return false
+      if (c.nav_location === 'plus_size_dropdown') return true
+      if (plusSizeParent && c.parent_id === plusSizeParent.id) return true
+      if (c.parent_id === 'cat-plus-size') return true
+      if (['modest-wear', 'salwar', 'daily-wear', 'plus-size-bottoms'].includes(c.slug)) return true
+      return false
+    })
+    .sort((a, b) => a.display_order - b.display_order)
+
+  const isPlusSizeSection =
+    currentCategorySlug === 'plus-size' ||
+    plusSizeCategories.some(c => c.slug === currentCategorySlug)
+
   const products = await getProducts({
     categorySlug: currentCategorySlug === 'all' ? undefined : currentCategorySlug,
     size:         currentSize === 'all' ? undefined : currentSize,
@@ -49,6 +81,15 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
 
   const currentCategory = categories.find(c => c.slug === currentCategorySlug)
   const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
+
+  // Dynamic Header Title & Subtitle
+  const pageTitle = isPlusSizeSection
+    ? (currentCategory && currentCategory.slug !== 'plus-size' && currentCategory.slug !== 'all-plus-size'
+        ? `PLUS SIZE ${currentCategory.name}`
+        : 'PLUS SIZE COLLECTION')
+    : (currentCategory ? currentCategory.name : (isSaleOnly ? 'SALE & CLEARANCE' : 'ALL PRODUCTS'))
+
+  const pageDescription = currentCategory?.description || (isPlusSizeSection ? 'XS to 7XL — Designed for every body' : 'XS to 7XL — Made for every body')
 
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal">
@@ -69,10 +110,10 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
 
             <div className="text-center space-y-0.5 flex-1 max-w-lg mx-auto">
               <h1 className="font-serif text-2xl sm:text-4xl font-bold tracking-wider text-charcoal uppercase">
-                {currentCategory ? currentCategory.name : 'ALL PRODUCTS'}
+                {pageTitle}
               </h1>
               <p className="text-xs text-mid">
-                {currentCategory?.description || 'XS to 7XL — Made for every body'}
+                {pageDescription}
               </p>
             </div>
 
@@ -118,40 +159,79 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             currentSort={currentSort}
             productsCount={products.length}
             sizeOptions={sizeOptions}
+            isPlusSizeSection={isPlusSizeSection}
           />
         </div>
       </div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-12 py-6 pb-24 space-y-6">
 
-        {/* ── DESKTOP: Category Sub-Tabs & Sort Row ── */}
+        {/* ── DESKTOP: Dynamic Category Sub-Tabs & Sort Row ── */}
         <div className="hidden sm:flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-3">
           
-          {/* Categories Tab Bar (Desktop) */}
+          {/* Dynamic Categories Tab Bar (Desktop) */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            <Link
-              href="/shop"
-              className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                currentCategorySlug === 'all'
-                  ? 'bg-wine text-white'
-                  : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
-              }`}
-            >
-              All
-            </Link>
-            {categories.map(cat => (
-              <Link
-                key={cat.id}
-                href={`/shop?category=${cat.slug}`}
-                className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                  currentCategorySlug === cat.slug
-                    ? 'bg-wine text-white'
-                    : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
-                }`}
-              >
-                {cat.name}
-              </Link>
-            ))}
+            {isPlusSizeSection ? (
+              <>
+                {/* 1. First Tab is always ALL PLUS SIZE */}
+                <Link
+                  href="/shop?category=plus-size"
+                  className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                    currentCategorySlug === 'plus-size' || currentCategorySlug === 'all-plus-size'
+                      ? 'bg-wine text-white shadow-xs'
+                      : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
+                  }`}
+                >
+                  ALL PLUS SIZE
+                </Link>
+
+                {/* 2. Subcategories under PLUS SIZE: MODEST WEAR | SALWAR | DAILY WEAR | BOTTOMS */}
+                {plusSizeCategories
+                  .filter(c => c.slug !== 'all-plus-size' && c.slug !== 'plus-size')
+                  .map(cat => (
+                    <Link
+                      key={cat.id}
+                      href={`/shop?category=${cat.slug}`}
+                      className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                        currentCategorySlug === cat.slug
+                          ? 'bg-wine text-white shadow-xs'
+                          : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
+                      }`}
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+              </>
+            ) : (
+              <>
+                {/* 1. All Products */}
+                <Link
+                  href="/shop"
+                  className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                    currentCategorySlug === 'all'
+                      ? 'bg-wine text-white shadow-xs'
+                      : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
+                  }`}
+                >
+                  All
+                </Link>
+
+                {/* 2. SHOP categories: UNDER ₹199 | UNDER ₹499 | 99 STORE | SALWAR SETS | CHIKANKARI | HIJABS | BOTTOMS */}
+                {shopCategories.map(cat => (
+                  <Link
+                    key={cat.id}
+                    href={`/shop?category=${cat.slug}`}
+                    className={`text-xs uppercase font-semibold tracking-wider px-3.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+                      currentCategorySlug === cat.slug
+                        ? 'bg-wine text-white shadow-xs'
+                        : 'bg-beige text-charcoal hover:bg-gold hover:text-white'
+                    }`}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Sort & Filter Controls (Desktop) */}

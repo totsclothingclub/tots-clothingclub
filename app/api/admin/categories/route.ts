@@ -27,32 +27,60 @@ export async function POST(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
-      const catPayload = {
+      const catPayload: any = {
         name: categoryData.name || 'New Category',
         slug: slug,
         description: categoryData.description || '',
         image_url: categoryData.image_url || '/images/placeholder.jpg',
         display_order: Number(categoryData.display_order) || 1,
-        is_active: categoryData.is_active ?? true
+        is_active: categoryData.is_active ?? true,
+        nav_location: categoryData.nav_location || 'shop_dropdown',
+        is_dropdown: categoryData.is_dropdown ?? false,
+        parent_id: categoryData.parent_id || null
       }
 
       if (categoryData.id && !categoryData.id.startsWith('cat-')) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('categories')
           .update(catPayload)
           .eq('id', categoryData.id)
           .select()
           .single()
-        if (!error && data) result = data
-        else if (error) console.error('Supabase update category error:', error)
+        
+        if (error) {
+          console.warn('Supabase update category error with new fields, attempting fallback:', error)
+          delete catPayload.nav_location
+          delete catPayload.is_dropdown
+          delete catPayload.parent_id
+          const fallbackRes = await supabase
+            .from('categories')
+            .update(catPayload)
+            .eq('id', categoryData.id)
+            .select()
+            .single()
+          if (!fallbackRes.error && fallbackRes.data) data = fallbackRes.data
+        }
+        if (data) result = data
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('categories')
           .insert([catPayload])
           .select()
           .single()
-        if (!error && data) result = data
-        else if (error) console.error('Supabase insert category error:', error)
+
+        if (error) {
+          console.warn('Supabase insert category error with new fields, attempting fallback:', error)
+          delete catPayload.nav_location
+          delete catPayload.is_dropdown
+          delete catPayload.parent_id
+          const fallbackRes = await supabase
+            .from('categories')
+            .insert([catPayload])
+            .select()
+            .single()
+          if (!fallbackRes.error && fallbackRes.data) data = fallbackRes.data
+        }
+        if (data) result = data
       }
     }
 

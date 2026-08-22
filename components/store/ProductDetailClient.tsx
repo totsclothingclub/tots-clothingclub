@@ -42,18 +42,29 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   
-  // Available sizes
-  const availableSizes = product.available_sizes || ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
-  const [selectedSize, setSelectedSize] = useState<string>('3XL')
+  // Available sizes from product
+  const availableSizes = product.available_sizes && product.available_sizes.length > 0
+    ? product.available_sizes
+    : ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
+  const [selectedSize, setSelectedSize] = useState<string>(product.available_sizes?.[0] || 'M')
   
-  // Mock color swatches matching design
-  const colors = [
-    { name: 'Black Floral', img: images[0]?.image_url || product.primary_image },
-    { name: 'Wine Maroon', img: '/images/placeholder.jpg' },
-    { name: 'Navy Blue', img: '/images/placeholder.jpg' },
-    { name: 'Purple Plum', img: '/images/placeholder.jpg' },
-  ]
-  const [selectedColor, setSelectedColor] = useState<string>('Black')
+  // Dynamic color variants from admin product data
+  const colors: { name: string; img?: string; hex?: string }[] = []
+  if (product.variants && product.variants.length > 0) {
+    const seen = new Set<string>()
+    for (const v of product.variants) {
+      if (v.color && v.color.trim() && v.color !== 'Standard' && !seen.has(v.color.toLowerCase().trim())) {
+        seen.add(v.color.toLowerCase().trim())
+        colors.push({
+          name: v.color.trim(),
+          img: v.image_url || images[0]?.image_url || product.primary_image,
+          hex: v.color_hex
+        })
+      }
+    }
+  }
+
+  const [selectedColor, setSelectedColor] = useState<string>(colors[0]?.name || '')
   const [quantity, setQuantity] = useState(1)
 
   // Accordion states
@@ -226,31 +237,49 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
             <p className="text-[11px] text-mid">Inclusive of all taxes</p>
           </div>
 
-          {/* ── Color Swatches (Exact Reference) ── */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-charcoal">
-              <span>Color: <strong className="text-wine">{selectedColor}</strong></span>
+          {/* ── Color Swatches — Only rendered when admin has added colors ── */}
+          {colors.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-charcoal">
+                <span>Color: <strong className="text-wine">{selectedColor}</strong></span>
+              </div>
+              <div className="flex items-center gap-3">
+                {colors.map(col => (
+                  <button
+                    key={col.name}
+                    type="button"
+                    onClick={() => {
+                      setSelectedColor(col.name)
+                      if (col.img) {
+                        const imgIdx = images.findIndex(img => img.image_url === col.img)
+                        if (imgIdx !== -1) setActiveImageIndex(imgIdx)
+                      }
+                    }}
+                    title={col.name}
+                    className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${
+                      selectedColor === col.name ? 'border-wine scale-110 shadow-md ring-2 ring-wine/30' : 'border-border opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    {col.img && !col.img.includes('placeholder') ? (
+                      <img src={col.img} alt={col.name} className="w-full h-full object-cover rounded-full" />
+                    ) : col.hex ? (
+                      <div className="w-full h-full rounded-full" style={{ backgroundColor: col.hex }} />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-beige flex items-center justify-center text-[10px] font-bold text-charcoal">
+                        {col.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              {colors.map(col => (
-                <button
-                  key={col.name}
-                  onClick={() => setSelectedColor(col.name)}
-                  className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${
-                    selectedColor === col.name ? 'border-wine scale-110 shadow-md' : 'border-border opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <img src={col.img} alt={col.name} className="w-full h-full object-cover rounded-full" />
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* ── Size Selector & Size Guide (Exact Reference) ── */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-charcoal">
-                Size: <strong className="text-wine">{selectedSize} (46)</strong>
+                Size: <strong className="text-wine">{selectedSize}</strong>
               </span>
               <button
                 type="button"

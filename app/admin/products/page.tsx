@@ -93,7 +93,10 @@ export default function AdminProductsPage() {
 
   const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())
-    const matchCategory = selectedCategory === 'all' || p.category_id === selectedCategory || p.category?.slug === selectedCategory
+    const matchCategory = selectedCategory === 'all' || 
+      p.category_id === selectedCategory || 
+      p.category?.slug === selectedCategory ||
+      (p as any).category_ids?.includes(selectedCategory)
     const matchStatus = selectedStatus === 'all' || p.status === selectedStatus
     return matchSearch && matchCategory && matchStatus
   })
@@ -216,7 +219,11 @@ export default function AdminProductsPage() {
                       {/* Image */}
                       <td className="p-4">
                         <img
-                          src={p.primary_image || '/images/placeholder.jpg'}
+                          src={
+                            (p.primary_image && p.primary_image !== '/images/placeholder.jpg')
+                              ? p.primary_image
+                              : p.images?.[0]?.image_url || '/images/placeholder.jpg'
+                          }
                           alt={p.name}
                           className="w-12 h-14 object-cover object-top rounded border border-border shadow-2xs"
                         />
@@ -236,8 +243,26 @@ export default function AdminProductsPage() {
                       {/* SKU */}
                       <td className="p-4 font-mono font-semibold text-charcoal">{p.sku}</td>
 
-                      {/* Category */}
-                      <td className="p-4 text-mid">{p.category?.name || 'General'}</td>
+                      {/* Categories (Multi-badge) */}
+                      <td className="p-4 max-w-[180px]">
+                        <div className="flex flex-wrap gap-1">
+                          {(p as any).category_ids && (p as any).category_ids.length > 0 ? (
+                            (p as any).category_ids.map((catId: string) => {
+                              const cat = categories.find(c => c.id === catId || c.slug === catId)
+                              return (
+                                <span
+                                  key={catId}
+                                  className="inline-block bg-beige border border-border text-charcoal text-[10px] font-semibold px-2 py-0.5 rounded-md"
+                                >
+                                  {cat ? cat.name : catId}
+                                </span>
+                              )
+                            })
+                          ) : (
+                            <span className="text-mid text-xs">{p.category?.name || 'General'}</span>
+                          )}
+                        </div>
+                      </td>
 
                       {/* Price */}
                       <td className="p-4">

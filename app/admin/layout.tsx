@@ -23,7 +23,8 @@ import {
   ChevronRight,
   Sparkles,
   ShieldCheck,
-  Instagram
+  Instagram,
+  LayoutGrid
 } from 'lucide-react'
 
 interface NavGroup {
@@ -68,6 +69,7 @@ const navGroups: NavGroup[] = [
     title: 'MARKETING & CONTENT',
     items: [
       { label: 'Hero Banners', href: '/admin/banners', icon: ImageIcon },
+      { label: 'Promo Cards', href: '/admin/promo-cards', icon: LayoutGrid },
       { label: 'Seen on Instagram', href: '/admin/instagram', icon: Instagram },
       { label: 'Coupons', href: '/admin/coupons', icon: Ticket }
     ]
@@ -94,6 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname.includes('/admin/customers')) return 'Customers'
     if (pathname.includes('/admin/reviews')) return 'Reviews'
     if (pathname.includes('/admin/banners')) return 'Banners & Marketing'
+    if (pathname.includes('/admin/promo-cards')) return 'Promotional Cards'
     if (pathname.includes('/admin/instagram')) return 'Seen on Instagram'
     if (pathname.includes('/admin/coupons')) return 'Coupons'
     if (pathname.includes('/admin/settings')) return 'Store Settings'

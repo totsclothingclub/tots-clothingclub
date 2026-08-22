@@ -6,8 +6,9 @@ import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { ProductCard } from '@/components/store/ProductCard'
 import BestSellersCarousel from '@/components/store/BestSellersCarousel'
 import HeroSlider from '@/components/store/HeroSlider'
+import HomeCategoryCarousel from '@/components/store/HomeCategoryCarousel'
 import NewsletterForm from '@/components/store/NewsletterForm'
-import { getActiveBanners, getCategories, getProducts, getInstagramPosts } from '@/lib/supabase/data-service'
+import { getActiveBanners, getCategories, getProducts, getInstagramPosts, getActivePromoCards } from '@/lib/supabase/data-service'
 import {
   ArrowRight,
   Truck,
@@ -26,12 +27,13 @@ import {
 export const revalidate = 0
 
 export default async function HomePage() {
-  const [banners, rawCategories, products, allProducts, dynamicIgPosts] = await Promise.all([
+  const [banners, rawCategories, products, allProducts, dynamicIgPosts, promoCards] = await Promise.all([
     getActiveBanners(),
     getCategories(),
     getProducts({ isBestSeller: true }),
     getProducts(),
-    getInstagramPosts()
+    getInstagramPosts(),
+    getActivePromoCards()
   ])
 
   const categories = (rawCategories || []).filter(c => c.is_active).sort((a, b) => a.display_order - b.display_order)
@@ -67,84 +69,17 @@ export default async function HomePage() {
         <HeroSlider initialBanners={banners} />
 
         {/* ═══════════════════════════════════════════════════
-        {/* ═══════════════════════════════════════════════════
-            3. SHOP BY CATEGORY SECTION (Dynamic Centered Layout)
+            3. SHOP BY CATEGORY SECTION (4 Desktop Cards + Auto-Swiping Mobile 4-Item Carousel)
         ═══════════════════════════════════════════════════ */}
         {categories.length > 0 && (
-          <section className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 space-y-6">
-            <div className="text-center space-y-1 lg:hidden">
-              <h2 className="font-serif text-2xl font-bold tracking-wider text-charcoal uppercase">
-                SHOP BY CATEGORY
-              </h2>
-              <div className="w-12 h-0.5 bg-gold mx-auto" />
-            </div>
-
-            {/* ── DESKTOP VIEW: Dynamic Centered Horizontal Split Cards ── */}
-            <div className="hidden lg:flex flex-wrap justify-center gap-5">
-              {categories.slice(0, 4).map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/shop?category=${cat.slug}`}
-                  className="group relative bg-[#f5efe6] overflow-hidden border border-border/70 flex items-stretch hover:border-gold transition-all duration-300 min-h-[150px] flex-1 min-w-[270px] max-w-[360px]"
-                >
-                  {/* Left section: Text content */}
-                  <div className="flex-1 p-5 flex flex-col justify-between space-y-3">
-                    <div className="space-y-1">
-                      <h3 className="font-serif font-bold text-charcoal text-base lg:text-lg uppercase tracking-wider group-hover:text-wine transition-colors leading-tight">
-                        {cat.name}
-                      </h3>
-                      <p className="text-[11px] text-mid leading-relaxed line-clamp-2">
-                        {cat.description || 'Check out our latest collection'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-charcoal group-hover:text-wine transition-colors">
-                        SHOP NOW &rarr;
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right section: Large category image */}
-                  <div className="w-[42%] flex-shrink-0 bg-white">
-                    <img
-                      src={cat.image_url || '/images/placeholder.jpg'}
-                      alt={cat.name}
-                      className="w-full h-full object-cover object-top group-hover:scale-102 transition-transform duration-500"
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* ── MOBILE VIEW: Dynamic Centered Circular Cards ── */}
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:hidden">
-              {categories.slice(0, 4).map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/shop?category=${cat.slug}`}
-                  className="group flex flex-col items-center text-center space-y-2.5 cursor-pointer w-[calc(50%-12px)] max-w-[180px]"
-                >
-                  <div className="w-32 h-32 xs:w-36 xs:h-36 rounded-full overflow-hidden bg-beige p-1 border-2 border-gold/40 group-hover:border-wine group-hover:scale-105 transition-all duration-300 shadow-md">
-                    <img
-                      src={cat.image_url || '/images/placeholder.jpg'}
-                      alt={cat.name}
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  </div>
-                  <h3 className="font-serif font-bold text-charcoal text-xs xs:text-sm uppercase tracking-wider group-hover:text-wine transition-colors">
-                    {cat.name}
-                  </h3>
-                </Link>
-              ))}
-            </div>
-          </section>
+          <HomeCategoryCarousel categories={categories} />
         )}
 
         {/* ═══════════════════════════════════════════════════
             4. OUR BEST SELLERS SECTION — Smart Centered Carousel
         ═══════════════════════════════════════════════════ */}
         {bestSellers.length > 0 && (
-          <section className="max-w-[1600px] mx-auto space-y-6">
+          <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <div className="text-center space-y-1.5 px-4">
               <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-wider text-charcoal uppercase">
                 OUR BEST SELLERS
@@ -171,214 +106,156 @@ export default async function HomePage() {
         )}
 
         {/* ═══════════════════════════════════════════════════
-            5. THREE PROMOTIONAL BANNERS — Rectangular Split Layout (Desktop Only)
+            5. PROMOTIONAL CARDS — 3 Sized Cards in 1 Row on Desktop
         ═══════════════════════════════════════════════════ */}
-        <section className="max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-          {/* Desktop: 3-column flat rectangular banners */}
-          <div className="hidden lg:grid grid-cols-3 gap-5">
+        {promoCards && promoCards.length > 0 && (
+          <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Desktop: 3 Sized Cards in 1 Single Line matching the exact container */}
+            <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 xl:gap-6 w-full">
+              {promoCards.slice(0, 3).map((card) => {
+                const isDark = card.bg_color === 'wine' || card.bg_color === 'charcoal'
+                const bgClass =
+                  card.bg_color === 'wine' ? 'bg-[#7a1e3c] text-white border-[#7a1e3c]' :
+                  card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
+                  card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
+                  card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
+                  'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
+                const labelColor = isDark ? 'text-gold/90' : 'text-[#b8966a]'
+                const btnClass = isDark
+                  ? 'border-white text-white hover:bg-white hover:text-wine'
+                  : 'border-charcoal text-charcoal hover:bg-charcoal hover:text-white'
+                const descColor = isDark ? 'text-cream/85' : 'text-mid'
 
-            {/* Banner 1: Style Under ₹499 — Wine Background */}
-            <div className="bg-wine text-white overflow-hidden border border-wine flex items-stretch min-h-[190px]">
-              {/* Left: Text */}
-              <div className="flex-1 p-6 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-gold/90 block">
-                    SPECIAL DROP
-                  </span>
-                  <h3 className="font-serif text-2xl font-bold leading-tight">
-                    STYLE UNDER<br />₹499
-                  </h3>
-                  <p className="text-[11px] text-cream/80 leading-snug">
-                    Everything you love.<br />Nothing over ₹499.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?maxPrice=499"
-                    className="inline-block border border-white text-white text-[10px] uppercase font-bold tracking-widest px-4 py-2 hover:bg-white hover:text-wine transition-colors"
+                return (
+                  <div
+                    key={card.id}
+                    className={`overflow-hidden border flex items-stretch min-h-[220px] xl:min-h-[240px] w-full shadow-2xs hover:shadow-xs transition-all duration-300 ${bgClass}`}
                   >
-                    SHOP NOW
-                  </Link>
-                </div>
-              </div>
-              {/* Right: Image */}
-              <div className="w-[38%] flex-shrink-0">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="Style Under 499"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
+                    <div className="flex-1 p-6 xl:p-7 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        {card.label && (
+                          <span className={`text-[10px] uppercase font-bold tracking-widest block ${labelColor}`}>
+                            {card.label}
+                          </span>
+                        )}
+                        <h3 className="font-serif text-2xl xl:text-3xl font-bold leading-tight uppercase">
+                          {card.title}
+                        </h3>
+                        {card.description && (
+                          <p className={`text-xs leading-relaxed ${descColor}`}>
+                            {card.description.split('\n').map((line, i) => (
+                              <span key={i}>
+                                {line}
+                                {i < card.description!.split('\n').length - 1 && <br />}
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                      </div>
+                      {card.button_text && card.button_url && (
+                        <div className="pt-3">
+                          <Link
+                            href={card.button_url}
+                            className={`inline-block border text-[10px] uppercase font-bold tracking-widest px-5 py-2.5 transition-colors ${btnClass}`}
+                          >
+                            {card.button_text}
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-[42%] flex-shrink-0 bg-transparent overflow-hidden flex items-end justify-center relative">
+                      {card.image_url ? (
+                        <img
+                          src={card.image_url}
+                          alt={card.title}
+                          className="w-full h-full object-cover object-top bg-transparent hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center opacity-20 bg-transparent">
+                          <span className="text-4xl">👗</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
-            {/* Banner 2: Plus Size — Cream Background */}
-            <div className="bg-[#f5efe6] text-charcoal overflow-hidden border border-[#e8dfd2] flex items-stretch min-h-[190px]">
-              {/* Left: Text */}
-              <div className="flex-1 p-6 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#b8966a] block">
-                    XS TO 7XL
-                  </span>
-                  <h3 className="font-serif text-2xl font-bold leading-tight text-charcoal">
-                    PLUS SIZE<br />COLLECTION
-                  </h3>
-                  <p className="text-[11px] text-mid leading-snug">
-                    Fashion that fits beautifully<br />and feels amazing.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?category=plus-size"
-                    className="inline-block border border-charcoal text-charcoal text-[10px] uppercase font-bold tracking-widest px-4 py-2 hover:bg-charcoal hover:text-white transition-colors"
+
+
+            {/* Mobile: stacked flex cards */}
+            <div className="lg:hidden flex flex-col gap-4">
+              {promoCards.map((card) => {
+                const isDark = card.bg_color === 'wine' || card.bg_color === 'charcoal'
+                const bgClass =
+                  card.bg_color === 'wine' ? 'bg-wine text-white border-wine' :
+                  card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
+                  card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
+                  card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
+                  'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
+                const labelColor = isDark ? 'text-gold/90' : 'text-mid'
+                const btnClass = isDark
+                  ? 'border-white/90 text-white hover:bg-white hover:text-wine'
+                  : 'border-charcoal text-charcoal hover:bg-charcoal hover:text-white'
+                const descColor = isDark ? 'text-cream/80' : 'text-mid'
+
+                return (
+                  <div
+                    key={card.id}
+                    className={`overflow-hidden border flex items-stretch h-[200px] ${bgClass}`}
                   >
-                    EXPLORE NOW
-                  </Link>
-                </div>
-              </div>
-              {/* Right: Image */}
-              <div className="w-[38%] flex-shrink-0">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="Plus Size Collection"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
+                    <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
+                      <div className="space-y-1">
+                        {card.label && (
+                          <span className={`text-[10px] uppercase font-bold tracking-wider block ${labelColor}`}>
+                            {card.label}
+                          </span>
+                        )}
+                        <h3 className="font-serif text-lg sm:text-xl font-bold leading-tight uppercase">
+                          {card.title}
+                        </h3>
+                        {card.description && (
+                          <p className={`text-[11px] leading-snug pt-1 ${descColor}`}>
+                            {card.description.split('\n').map((line, i) => (
+                              <span key={i}>
+                                {line}
+                                {i < card.description!.split('\n').length - 1 && <br />}
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                      </div>
+                      {card.button_text && card.button_url && (
+                        <div>
+                          <Link
+                            href={card.button_url}
+                            className={`inline-block border text-[10px] uppercase font-bold tracking-widest px-3.5 py-1.5 transition-colors ${btnClass}`}
+                          >
+                            {card.button_text}
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-[42%] flex-shrink-0 overflow-hidden bg-transparent flex items-center justify-center relative">
+                      {card.image_url ? (
+                        <img
+                          src={card.image_url}
+                          alt={card.title}
+                          className="w-full h-full object-cover object-top bg-transparent"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center opacity-20 bg-transparent">
+                          <span className="text-3xl">👗</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
+          </section>
+        )}
 
-            {/* Banner 3: New Arrivals — Cream Background */}
-            <div className="bg-[#f5efe6] text-charcoal overflow-hidden border border-[#e8dfd2] flex items-stretch min-h-[190px]">
-              {/* Left: Text */}
-              <div className="flex-1 p-6 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#b8966a] block">
-                    NEW SEASON
-                  </span>
-                  <h3 className="font-serif text-2xl font-bold leading-tight text-charcoal">
-                    NEW<br />ARRIVALS
-                  </h3>
-                  <p className="text-[11px] text-mid leading-snug">
-                    Fresh styles.<br />Just for you.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?category=new-arrivals"
-                    className="inline-block border border-charcoal text-charcoal text-[10px] uppercase font-bold tracking-widest px-4 py-2 hover:bg-charcoal hover:text-white transition-colors"
-                  >
-                    SHOP NOW
-                  </Link>
-                </div>
-              </div>
-              {/* Right: Image */}
-              <div className="w-[38%] flex-shrink-0">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="New Arrivals"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            </div>
-
-          </div>
-
-          {/* Mobile: Clean Rectangular Cards (Uniform height, no border-radius, split layout) */}
-          <div className="lg:hidden flex flex-col gap-4">
-
-            {/* Card 1: Style Under ₹499 (Burgundy / Wine) */}
-            <div className="bg-wine text-white overflow-hidden border border-wine flex items-stretch h-[200px]">
-              <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-serif text-lg sm:text-xl font-bold leading-tight uppercase">
-                    STYLE UNDER<br />₹499
-                  </h3>
-                  <p className="text-[11px] text-cream/80 leading-snug pt-1">
-                    Everything you love.<br />Nothing over ₹499.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?maxPrice=499"
-                    className="inline-block border border-white/90 text-white text-[10px] uppercase font-bold tracking-widest px-3.5 py-1.5 hover:bg-white hover:text-wine transition-colors"
-                  >
-                    SHOP NOW
-                  </Link>
-                </div>
-              </div>
-              <div className="w-[42%] flex-shrink-0 relative overflow-hidden">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="Style Under 499"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            </div>
-
-            {/* Card 2: Plus Size Collection (Cream) — Same exact height as Card 1 */}
-            <div className="bg-[#f5efe6] text-charcoal overflow-hidden border border-[#e8dfd2] flex items-stretch h-[200px]">
-              <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-serif text-lg sm:text-xl font-bold leading-tight text-charcoal uppercase">
-                    PLUS SIZE COLLECTION
-                  </h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-mid block pt-0.5">
-                    XS TO 7XL
-                  </span>
-                  <p className="text-[11px] text-mid leading-snug pt-1">
-                    Fashion that fits beautifully<br />and feels amazing.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?category=plus-size"
-                    className="inline-block border border-charcoal text-charcoal text-[10px] uppercase font-bold tracking-widest px-3.5 py-1.5 hover:bg-charcoal hover:text-white transition-colors"
-                  >
-                    EXPLORE NOW
-                  </Link>
-                </div>
-              </div>
-              <div className="w-[42%] flex-shrink-0 relative overflow-hidden">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="Plus Size Collection"
-                  className="w-full h-full object-cover object-center"
-                />
-              </div>
-            </div>
-
-            {/* Card 3: New Arrivals (Cream) — Same exact height as Card 1 */}
-            <div className="bg-[#f5efe6] text-charcoal overflow-hidden border border-[#e8dfd2] flex items-stretch h-[200px]">
-              <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-serif text-lg sm:text-xl font-bold leading-tight text-charcoal uppercase">
-                    NEW ARRIVALS
-                  </h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-mid block pt-0.5">
-                    NEW SEASON
-                  </span>
-                  <p className="text-[11px] text-mid leading-snug pt-1">
-                    Fresh styles.<br />Just for you.
-                  </p>
-                </div>
-                <div>
-                  <Link
-                    href="/shop?category=new-arrivals"
-                    className="inline-block border border-charcoal text-charcoal text-[10px] uppercase font-bold tracking-widest px-3.5 py-1.5 hover:bg-charcoal hover:text-white transition-colors"
-                  >
-                    SHOP NOW
-                  </Link>
-                </div>
-              </div>
-              <div className="w-[42%] flex-shrink-0 relative overflow-hidden">
-                <img
-                  src="/images/placeholder.jpg"
-                  alt="New Arrivals"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            </div>
-
-          </div>
-        </section>
 
         {/* ═══════════════════════════════════════════════════
             6. SEEN ON INSTAGRAM GALLERY (100% Dynamic)

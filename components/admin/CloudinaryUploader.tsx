@@ -5,7 +5,7 @@ import { UploadCloud, Loader2, CheckCircle2, AlertCircle, Image as ImageIcon, X 
 
 interface CloudinaryUploaderProps {
   onUploadSuccess: (url: string) => void
-  folder?: 'products' | 'banners' | 'categories' | 'instagram' | 'general'
+  folder?: 'products' | 'banners' | 'categories' | 'instagram' | 'promo-cards' | 'general'
   label?: string
   acceptMultiple?: boolean
   className?: string

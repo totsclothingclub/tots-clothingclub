@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         description: productData.description || '',
         short_description: productData.short_description || '',
         category_id: productData.category_id || null,
+        category_ids: productData.category_ids || [],
         brand: productData.brand || 'TOTS',
         sku: productData.sku || `TOTS-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
         regular_price: Number(productData.regular_price) || 999,
@@ -50,28 +51,64 @@ export async function POST(req: NextRequest) {
         is_best_seller: productData.is_best_seller ?? false,
         is_sale: productData.is_sale ?? false,
         is_plus_size: productData.is_plus_size ?? true,
-        primary_image: primaryImg
+        primary_image: primaryImg,
+        available_sizes: productData.available_sizes || ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL'],
+        rating_avg: productData.rating_avg || 5.0,
+        review_count: productData.review_count || 48
       }
 
       let savedId = productData.id
 
       if (productData.id && !productData.id.startsWith('prod-')) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('products')
           .update(productPayload)
           .eq('id', productData.id)
           .select()
           .single()
+        
+        if (error) {
+          // If error occurs because category_ids column does not exist yet in Supabase, retry without category_ids
+          delete productPayload.category_ids
+          const retry = await supabase
+            .from('products')
+            .update(productPayload)
+            .eq('id', productData.id)
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) savedId = data.id
-        else if (error) console.error('Supabase update product error:', error)
+        else if (error) {
+          console.error('Supabase update product error:', JSON.stringify(error))
+          return NextResponse.json({ error: `Update failed: ${error.message}`, details: error }, { status: 400 })
+        }
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('products')
           .insert([productPayload])
           .select()
           .single()
+
+        if (error) {
+          // If error occurs because category_ids column does not exist yet in Supabase, retry without category_ids
+          delete productPayload.category_ids
+          const retry = await supabase
+            .from('products')
+            .insert([productPayload])
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) savedId = data.id
-        else if (error) console.error('Supabase insert product error:', error)
+        else if (error) {
+          console.error('Supabase insert product error:', JSON.stringify(error))
+          return NextResponse.json({ error: `Insert failed: ${error.message}`, details: error }, { status: 400 })
+        }
       }
 
       if (savedId) {
@@ -114,7 +151,6 @@ export async function POST(req: NextRequest) {
     try {
       revalidatePath('/')
       revalidatePath('/shop')
-      revalidatePath('/(store)', 'layout')
       revalidatePath('/admin/products')
     } catch (e) {
       console.warn('Revalidation error:', e)

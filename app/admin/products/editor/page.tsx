@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getProductById, saveProduct, getCategories } from '@/lib/supabase/data-service'
-import { Category, Product, ProductImage } from '@/lib/types'
+import { Category, Product, ProductImage, ProductVariant } from '@/lib/types'
 import {
   ArrowLeft,
   Save,
@@ -19,7 +19,10 @@ import {
   Search,
   ExternalLink,
   ShieldCheck,
-  UploadCloud
+  UploadCloud,
+  Loader2,
+  ChevronDown,
+  X
 } from 'lucide-react'
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
 
@@ -42,6 +45,14 @@ function ProductEditorContent() {
   const [newImageUrl, setNewImageUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'media' | 'attributes' | 'seo'>('general')
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [colorVariants, setColorVariants] = useState<{ id?: string; color: string; color_hex?: string; image_url?: string }[]>([])
+  const [uploadingColorIdx, setUploadingColorIdx] = useState<number | null>(null)
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+  const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
@@ -66,6 +77,17 @@ function ProductEditorContent() {
     meta_description: ''
   })
 
+  // Close category dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setCategoryDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
   useEffect(() => {
     getCategories().then(setCategories)
 
@@ -85,10 +107,30 @@ function ProductEditorContent() {
             setFormData(existing)
           }
 
+          const cats = (existing as any).category_ids || (existing.category_id ? [existing.category_id] : [])
+          setSelectedCategoryIds(cats)
+
           if (existing.images && existing.images.length > 0) {
             setImageUrls(existing.images.map(img => img.image_url))
           } else if (existing.primary_image) {
             setImageUrls([existing.primary_image])
+          }
+
+          if (existing.variants && existing.variants.length > 0) {
+            const seen = new Set<string>()
+            const parsedCols: { id?: string; color: string; color_hex?: string; image_url?: string }[] = []
+            for (const v of existing.variants) {
+              if (v.color && v.color !== 'Standard' && !seen.has(v.color.toLowerCase())) {
+                seen.add(v.color.toLowerCase())
+                parsedCols.push({
+                  id: v.id,
+                  color: v.color,
+                  color_hex: v.color_hex || '#7a1e3c',
+                  image_url: v.image_url || ''
+                })
+              }
+            }
+            setColorVariants(parsedCols)
           }
         }
       })
@@ -169,6 +211,86 @@ function ProductEditorContent() {
     setCustomAttributes(customAttributes.filter((_, i) => i !== index))
   }
 
+  // Create category inline from product editor
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return
+    setCreatingCategory(true)
+    try {
+      const slug = newCategoryName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCategoryName.trim(),
+          slug,
+          is_active: true,
+          display_order: categories.length + 1
+        })
+      })
+      const data = await res.json()
+      if (data.id) {
+        const updatedCats = await getCategories()
+        setCategories(updatedCats)
+        setSelectedCategoryIds(prev => [...prev, data.id])
+        setFormData(prev => ({ ...prev, category_id: data.id }))
+        setNewCategoryName('')
+        setShowNewCategoryInput(false)
+      }
+    } catch (err) {
+      console.error('Failed to create category:', err)
+    } finally {
+      setCreatingCategory(false)
+    }
+  }
+
+  // Multi-category toggle helper
+  const toggleCategory = (catId: string) => {
+    setSelectedCategoryIds(prev => {
+      const isChecked = prev.includes(catId)
+      const next = isChecked ? prev.filter(id => id !== catId) : [...prev, catId]
+
+      const hasPlusSize = next.some(id => {
+        const c = categories.find(cat => cat.id === id)
+        return c && (c.nav_location === 'plus_size_dropdown' || c.parent_id === 'cat-plus-size' || c.slug === 'plus-size')
+      })
+
+      setFormData(f => ({
+        ...f,
+        category_id: next[0] || '',
+        category_ids: next as any,
+        is_plus_size: hasPlusSize ? true : f.is_plus_size
+      }))
+
+      return next
+    })
+  }
+
+  // Direct upload for Color Variant images
+  const handleColorImageUpload = async (file: File, idx: number) => {
+    setUploadingColorIdx(idx)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('folder', 'products')
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form
+      })
+      const data = await res.json()
+      if (data.url) {
+        const next = [...colorVariants]
+        next[idx].image_url = data.url
+        setColorVariants(next)
+      } else {
+        alert(data.error || 'Upload failed')
+      }
+    } catch (e: any) {
+      alert(e.message || 'Image upload failed')
+    } finally {
+      setUploadingColorIdx(null)
+    }
+  }
+
   // Media management
   const addImage = () => {
     if (newImageUrl.trim()) {
@@ -207,18 +329,40 @@ function ProductEditorContent() {
         display_order: i + 1
       }))
 
+      const variantsPayload: ProductVariant[] = colorVariants
+        .filter(c => c.color.trim())
+        .map((c, i) => ({
+          id: c.id || `var-${Date.now()}-${i}`,
+          product_id: formData.id || '',
+          color: c.color.trim(),
+          color_hex: c.color_hex || '#1a1a1a',
+          size: 'Standard',
+          sku: `${formData.sku || 'SKU'}-${c.color.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          price: Number(formData.sale_price || formData.regular_price || 799),
+          stock_quantity: 20,
+          image_url: c.image_url || ''
+        }))
+
       const payload = {
         ...formData,
+        category_id: selectedCategoryIds[0] || formData.category_id || null,
+        category_ids: selectedCategoryIds,
         status,
         images: imagesPayload,
+        variants: variantsPayload,
         primary_image: formData.primary_image || imageUrls[0] || '/images/placeholder.jpg'
       }
 
-      await fetch('/api/admin/products', {
+      const res = await fetch('/api/admin/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Unknown server error' }))
+        throw new Error(errData.error || `Server responded with status ${res.status}`)
+      }
 
       router.push('/admin/products')
     } catch (err: any) {
@@ -302,6 +446,29 @@ function ProductEditorContent() {
             General Information
           </h3>
 
+          {/* ── Primary Image Preview (read-only here, upload in Media Gallery tab) ── */}
+          <div className="flex gap-4 items-center p-3 bg-beige rounded-xl border border-border">
+            <div className="flex-shrink-0 w-20 h-24 rounded-lg overflow-hidden border border-border bg-white flex items-center justify-center">
+              {(formData.primary_image && formData.primary_image !== '/images/placeholder.jpg') || imageUrls[0] ? (
+                <img
+                  src={(formData.primary_image && formData.primary_image !== '/images/placeholder.jpg') ? formData.primary_image : imageUrls[0]}
+                  alt="Primary"
+                  className="w-full h-full object-cover object-top"
+                />
+              ) : (
+                <ImageIcon size={20} className="text-mid" />
+              )}
+            </div>
+            <div className="text-xs">
+              {(formData.primary_image && formData.primary_image !== '/images/placeholder.jpg') || imageUrls[0] ? (
+                <p className="text-emerald-700 font-semibold">✓ Product image uploaded</p>
+              ) : (
+                <p className="font-semibold text-charcoal">No image uploaded yet</p>
+              )}
+              <p className="text-mid mt-0.5">Go to <strong>Tab 3: Media Gallery</strong> to upload product images.</p>
+            </div>
+          </div>
+
           <div className="space-y-4 text-xs">
             <div>
               <label className="font-semibold block mb-1 text-charcoal">
@@ -344,18 +511,191 @@ function ProductEditorContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-semibold block mb-1 text-charcoal">Category</label>
-                <select
-                  name="category_id"
-                  value={formData.category_id || ''}
-                  onChange={handleInputChange}
-                  className="w-full text-xs p-3 rounded-lg border border-border bg-white focus:outline-none focus:border-gold"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-charcoal">Category</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCategoryInput(prev => !prev)}
+                    className="text-[11px] text-wine hover:underline font-semibold flex items-center gap-1"
+                  >
+                    + Add New Category
+                  </button>
+                </div>
+
+                {showNewCategoryInput && (
+                  <div className="p-3 bg-[#f5efe6] border border-[#e8dfd2] rounded-lg space-y-2 mb-2">
+                    <label className="text-[11px] font-bold text-charcoal block">
+                      New Category Name (e.g. Salwar, Kurtas, Co-ords)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={e => setNewCategoryName(e.target.value)}
+                        placeholder="e.g. Salwar"
+                        className="flex-1 text-xs p-2 rounded-md border border-border bg-white focus:outline-none focus:border-gold"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        disabled={creatingCategory || !newCategoryName.trim()}
+                        className="px-3 py-2 bg-charcoal text-cream text-xs font-semibold rounded-md hover:bg-wine transition-colors disabled:opacity-50"
+                      >
+                        {creatingCategory ? 'Adding...' : 'Add & Select'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowNewCategoryInput(false); setNewCategoryName('') }}
+                        className="px-2 py-2 text-mid hover:text-charcoal text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative" ref={categoryDropdownRef}>
+                  {/* Selector button / Selected Tags display */}
+                  <div
+                    onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                    className="w-full min-h-[44px] p-2 rounded-lg border border-border bg-white cursor-pointer flex flex-wrap items-center justify-between gap-1.5 focus:border-gold hover:border-gold/60 transition-colors"
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                      {selectedCategoryIds.length === 0 ? (
+                        <span className="text-mid text-xs py-1 px-1">Select one or more categories...</span>
+                      ) : (
+                        selectedCategoryIds.map(id => {
+                          const cat = categories.find(c => c.id === id)
+                          if (!cat) return null
+                          const isPlus = cat.nav_location === 'plus_size_dropdown' || cat.parent_id === 'cat-plus-size'
+                          return (
+                            <span
+                              key={id}
+                              className={`inline-flex items-center gap-1 border text-[11px] font-semibold px-2.5 py-1 rounded-md ${
+                                isPlus
+                                  ? 'bg-rose-50 border-rose-200 text-rose-900'
+                                  : 'bg-amber-50 border-amber-200 text-amber-900'
+                              }`}
+                            >
+                              <span>{isPlus ? 'Plus Size › ' : 'Shop › '}{cat.name}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleCategory(id)
+                                }}
+                                className="hover:text-rose-600 p-0.5"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          )
+                        })
+                      )}
+                    </div>
+                    <ChevronDown size={14} className={`text-mid transition-transform duration-200 ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {/* Dropdown with Checkbox Multi-Select */}
+                  {categoryDropdownOpen && (
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-white rounded-xl border border-border shadow-xl p-3 max-h-72 overflow-y-auto space-y-3">
+                      
+                      {/* Plus Size Categories */}
+                      {categories.some(c => c.nav_location === 'plus_size_dropdown' || c.parent_id === 'cat-plus-size') && (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-800 bg-rose-50/80 px-2 py-1 rounded">
+                            PLUS SIZE COLLECTION
+                          </div>
+                          <div className="space-y-0.5 pl-1">
+                            {categories
+                              .filter(c => c.nav_location === 'plus_size_dropdown' || c.parent_id === 'cat-plus-size')
+                              .map(c => {
+                                const isChecked = selectedCategoryIds.includes(c.id)
+                                return (
+                                  <label
+                                    key={c.id}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-beige/60 cursor-pointer text-xs font-medium text-charcoal"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleCategory(c.id)}
+                                      className="rounded border-border text-charcoal focus:ring-gold"
+                                    />
+                                    <span>{c.name}</span>
+                                  </label>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Shop Categories */}
+                      {categories.some(c => c.nav_location === 'shop_dropdown' || c.parent_id === 'cat-shop') && (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50/80 px-2 py-1 rounded">
+                            SHOP CATEGORIES
+                          </div>
+                          <div className="space-y-0.5 pl-1">
+                            {categories
+                              .filter(c => c.nav_location === 'shop_dropdown' || c.parent_id === 'cat-shop')
+                              .map(c => {
+                                const isChecked = selectedCategoryIds.includes(c.id)
+                                return (
+                                  <label
+                                    key={c.id}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-beige/60 cursor-pointer text-xs font-medium text-charcoal"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleCategory(c.id)}
+                                      className="rounded border-border text-charcoal focus:ring-gold"
+                                    />
+                                    <span>{c.name}</span>
+                                  </label>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Top Level / Other Categories */}
+                      {categories.some(c => c.nav_location === 'navbar' || c.nav_location === 'none') && (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-purple-800 bg-purple-50/80 px-2 py-1 rounded">
+                            MAIN & OTHER CATEGORIES
+                          </div>
+                          <div className="space-y-0.5 pl-1">
+                            {categories
+                              .filter(c => c.nav_location === 'navbar' || c.nav_location === 'none')
+                              .map(c => {
+                                const isChecked = selectedCategoryIds.includes(c.id)
+                                return (
+                                  <label
+                                    key={c.id}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-beige/60 cursor-pointer text-xs font-medium text-charcoal"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleCategory(c.id)}
+                                      className="rounded border-border text-charcoal focus:ring-gold"
+                                    />
+                                    <span>{c.name}</span>
+                                  </label>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="font-semibold block mb-1 text-charcoal">Brand</label>
@@ -466,10 +806,12 @@ function ProductEditorContent() {
             onUploadSuccess={(url) => {
               setImageUrls(prev => {
                 const next = [...prev, url]
-                if (!formData.primary_image) {
-                  setFormData(f => ({ ...f, primary_image: url }))
-                }
                 return next
+              })
+              // Set as primary if no real image yet (placeholder or empty)
+              setFormData(f => {
+                const noRealImage = !f.primary_image || f.primary_image === '/images/placeholder.jpg' || f.primary_image === ''
+                return noRealImage ? { ...f, primary_image: url } : f
               })
             }}
           />
@@ -568,6 +910,124 @@ function ProductEditorContent() {
                 )
               })}
             </div>
+          </div>
+
+          {/* ── Color Variants (Color Name & Direct Image Upload) ── */}
+          <div className="space-y-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-lg font-semibold text-charcoal">Color Variants</h3>
+                <p className="text-xs text-mid">Add optional colors with custom color names, swatch colors, and direct file uploads.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setColorVariants(prev => [...prev, { color: '', color_hex: '#7a1e3c', image_url: '' }])}
+                className="text-xs font-semibold px-3 py-1.5 bg-[#faf7f2] hover:bg-gold/20 text-charcoal border border-border rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Plus size={13} /> Add Color Variant
+              </button>
+            </div>
+
+            {colorVariants.length === 0 ? (
+              <p className="text-xs text-mid italic bg-[#faf7f2] p-3.5 rounded-xl border border-border">
+                No color variants added. The product page will not display color circles unless you add them. Click &quot;Add Color Variant&quot; if this product is available in multiple colors.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {colorVariants.map((col, idx) => (
+                  <div key={idx} className="flex flex-wrap items-center gap-3 p-3.5 bg-[#faf7f2] border border-border rounded-xl">
+                    {/* Color Swatch Picker */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0" title="Pick swatch color">
+                      <input
+                        type="color"
+                        value={col.color_hex || '#7a1e3c'}
+                        onChange={e => {
+                          const next = [...colorVariants]
+                          next[idx].color_hex = e.target.value
+                          setColorVariants(next)
+                        }}
+                        className="w-9 h-9 rounded-full border-2 border-border cursor-pointer p-0 bg-transparent"
+                      />
+                    </div>
+
+                    {/* Color Name Input */}
+                    <div className="flex-1 min-w-[160px]">
+                      <input
+                        type="text"
+                        value={col.color}
+                        onChange={e => {
+                          const next = [...colorVariants]
+                          next[idx].color = e.target.value
+                          setColorVariants(next)
+                        }}
+                        placeholder="Color Name (e.g. Wine Maroon, Olive Green)"
+                        className="w-full text-xs p-2.5 rounded-lg border border-border bg-white focus:outline-none focus:border-gold font-medium"
+                      />
+                    </div>
+
+                    {/* Direct Image File Uploader & Thumbnail */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 bg-white text-charcoal border border-border rounded-lg hover:border-gold hover:bg-beige text-xs font-semibold transition-all shadow-2xs">
+                        {uploadingColorIdx === idx ? (
+                          <Loader2 size={14} className="animate-spin text-gold" />
+                        ) : (
+                          <UploadCloud size={14} className="text-gold" />
+                        )}
+                        <span>{col.image_url ? 'Change Image' : 'Select Image File'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingColorIdx === idx}
+                          onChange={e => {
+                            const f = e.target.files?.[0]
+                            if (f) handleColorImageUpload(f, idx)
+                          }}
+                        />
+                      </label>
+
+                      {/* Thumbnail Preview */}
+                      {col.image_url ? (
+                        <div className="relative group">
+                          <img
+                            src={col.image_url}
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover border-2 border-gold shadow-2xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = [...colorVariants]
+                              next[idx].image_url = ''
+                              setColorVariants(next)
+                            }}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] flex items-center justify-center hover:bg-rose-700 leading-none shadow-xs"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-full border border-border shadow-2xs flex items-center justify-center"
+                          style={{ backgroundColor: col.color_hex || '#7a1e3c' }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Delete Color Variant Button */}
+                    <button
+                      type="button"
+                      onClick={() => setColorVariants(colorVariants.filter((_, i) => i !== idx))}
+                      className="p-2 text-mid hover:text-wine rounded-lg hover:bg-rose-50 transition-colors flex-shrink-0"
+                      title="Delete this color variant"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tags */}

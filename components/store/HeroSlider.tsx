@@ -110,33 +110,33 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
           </div>
         ))}
 
-        {/* Subtle Gradient Overlay for Text Readability: bottom-up on mobile, left-to-right on desktop */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#faf7f2]/95 via-[#faf7f2]/70 to-transparent sm:bg-gradient-to-r sm:from-[#faf7f2]/95 sm:via-[#faf7f2]/75 sm:to-transparent w-full sm:w-[65%] lg:w-[55%] z-10 pointer-events-none" />
+        {/* Targeted Gradient Overlay: bottom-left radial wash on mobile, left-to-right gradient on desktop */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(250,247,242,0.95)_0%,_rgba(250,247,242,0.65)_40%,_transparent_75%)] sm:bg-gradient-to-r sm:from-[#faf7f2]/95 sm:via-[#faf7f2]/75 sm:to-transparent w-full sm:w-[65%] lg:w-[55%] z-10 pointer-events-none" />
 
         {/* ═══════════════════════════════════════════════════
             HERO CONTENT WRAPPER
         ═══════════════════════════════════════════════════ */}
-        <div className="relative z-20 w-full h-full max-w-[1600px] mx-auto px-6 sm:px-12 lg:px-20 xl:px-28 flex flex-col justify-between py-6 sm:py-10 lg:py-12">
+        <div className="relative z-20 w-full h-full max-w-[1600px] mx-auto px-5 sm:px-12 lg:px-20 xl:px-28 flex flex-col justify-end sm:justify-between pb-8 pt-4 sm:py-10 lg:py-12">
           
-          {/* Top/Middle Left Section: Fixed Layout Container */}
-          <div className="my-auto max-w-lg lg:max-w-xl text-left">
+          {/* Top/Middle Left Section: Left-bounded Container on Mobile (Bottom aligned on mobile, centered on desktop) */}
+          <div className="mt-auto sm:my-auto max-w-[65%] xs:max-w-[60%] sm:max-w-lg lg:max-w-xl text-left">
             
-            {/* ── 1. FIXED-HEIGHT TEXT REGION (Text transitions inside without moving buttons) ── */}
-            <div className="h-[170px] sm:h-[190px] lg:h-[210px] flex flex-col justify-center relative">
+            {/* ── 1. FIXED-WIDTH TEXT REGION (Enhanced large luxury typography on mobile) ── */}
+            <div className="h-[110px] xs:h-[125px] sm:h-[190px] lg:h-[210px] flex flex-col justify-end sm:justify-center relative w-full">
               {slides.map((slide, idx) => (
                 <div
                   key={idx}
-                  className={`absolute inset-0 flex flex-col justify-center space-y-2 sm:space-y-3.5 transition-all duration-500 ease-in-out ${
+                  className={`absolute inset-0 flex flex-col justify-end sm:justify-center space-y-1 sm:space-y-3.5 transition-all duration-500 ease-in-out ${
                     currentIndex === idx
                       ? 'opacity-100 translate-y-0 pointer-events-auto'
                       : 'opacity-0 -translate-y-2 pointer-events-none'
                   }`}
                 >
-                  <span className="text-[10px] sm:text-xs uppercase font-bold tracking-[0.25em] text-[#b8966a] block">
+                  <span className="text-xs xs:text-sm sm:text-xs uppercase font-bold tracking-[0.25em] text-[#b8966a] block leading-tight">
                     {slide.title}
                   </span>
 
-                  <h1 className="font-serif text-2xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-charcoal leading-[1.06]">
+                  <h1 className="font-serif text-2xl xs:text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-charcoal leading-[1.08] sm:leading-[1.06] break-words">
                     {slide.subtitle.includes('\n') ? (
                       slide.subtitle.split('\n').map((line, lIdx) => (
                         <span key={lIdx} className="block">{line}</span>
@@ -146,26 +146,28 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
                     )}
                   </h1>
 
-                  <p className="text-[11px] sm:text-sm text-mid max-w-md leading-relaxed font-medium line-clamp-2">
-                    {slide.description}
-                  </p>
+                  {slide.description && (
+                    <p className="hidden sm:block text-[10px] sm:text-sm text-mid max-w-full leading-relaxed font-medium line-clamp-2">
+                      {slide.description}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* ── 2. DYNAMIC CTA BUTTONS ── */}
-            <div className="mt-3 sm:mt-5 lg:mt-6 flex items-center gap-2.5 sm:gap-3.5 pt-1">
+            {/* ── 2. DYNAMIC CTA BUTTONS (Desktop Style, Centered Text, Vertically Stacked on Mobile) ── */}
+            <div className="mt-3 xs:mt-3.5 sm:mt-5 lg:mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3.5 pt-0.5 sm:pt-1 w-full max-w-[205px] xs:max-w-[225px] sm:max-w-none">
               <Link
                 href={slides[currentIndex]?.button_url || '/shop'}
-                className="bg-[#141414] text-cream font-semibold text-[9px] sm:text-xs uppercase tracking-wider px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-lg hover:bg-wine transition-all text-center shadow-xs whitespace-nowrap"
+                className="bg-[#141414] text-white border border-[#2b2b2b] font-bold text-[10px] xs:text-[11px] sm:text-xs uppercase tracking-wider px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-lg hover:bg-wine transition-all shadow-md flex items-center justify-center text-center w-full sm:w-auto whitespace-nowrap"
               >
-                {slides[currentIndex]?.button_text || 'SHOP NOW'}
+                <span>{slides[currentIndex]?.button_text || 'SHOP NOW'}</span>
               </Link>
               <Link
                 href="/shop?category=plus-size"
-                className="bg-transparent text-charcoal border border-[#b8966a] font-semibold text-[9px] sm:text-xs uppercase tracking-wider px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-lg hover:bg-[#b8966a] hover:text-white transition-all text-center whitespace-nowrap"
+                className="bg-transparent text-charcoal border border-[#b8966a] font-bold text-[10px] xs:text-[11px] sm:text-xs uppercase tracking-wider px-4 sm:px-8 py-2.5 sm:py-3.5 rounded-lg hover:bg-[#b8966a] hover:text-white transition-all flex items-center justify-center text-center w-full sm:w-auto whitespace-nowrap"
               >
-                EXPLORE PLUS SIZE
+                <span>EXPLORE PLUS SIZE</span>
               </Link>
             </div>
 
