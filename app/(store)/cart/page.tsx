@@ -42,17 +42,17 @@ export default function CartPage() {
             {/* Cart Items List */}
             <div className="lg:col-span-7 space-y-4">
               {items.map(item => (
-                <div key={item.id} className="p-4 bg-white rounded-2xl border border-tots-border shadow-xs flex gap-4">
+                <div key={item.id} className="p-4 bg-white rounded-2xl border border-tots-border shadow-xs flex gap-4 min-w-0 w-full items-stretch">
                   <img
                     src={item.product.primary_image}
                     alt={item.product.name}
-                    className="w-24 h-32 object-cover rounded-xl border border-tots-border"
+                    className="w-20 sm:w-24 h-28 sm:h-32 object-cover rounded-xl border border-tots-border flex-shrink-0"
                   />
-                  <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
-                      <div className="flex justify-between items-start">
-                        <Link href={`/products/${item.product.slug}`}>
-                          <h3 className="font-serif font-semibold text-tots-dark text-base hover:text-tots-wine transition-colors">
+                      <div className="flex justify-between items-start gap-1">
+                        <Link href={`/products/${item.product.slug}`} className="min-w-0 flex-1">
+                          <h3 className="font-serif font-semibold text-tots-dark text-base hover:text-tots-wine transition-colors truncate">
                             {item.product.name}
                           </h3>
                         </Link>
