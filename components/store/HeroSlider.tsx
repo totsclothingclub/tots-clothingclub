@@ -79,8 +79,50 @@ export default function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
     fn()
   }
 
+  // Mobile Touch Swipe Handlers (Swipe back & front)
+  const touchStartX = useRef<number | null>(null)
+  const touchEndX = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    touchStartX.current = e.targetTouches[0].clientX
+    touchEndX.current = null
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX
+  }
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current !== null && touchEndX.current !== null) {
+      const diff = touchStartX.current - touchEndX.current
+      if (diff > 35) {
+        // Swiped left -> Move forward to next slide
+        goToNext()
+      } else if (diff < -35) {
+        // Swiped right -> Move backward to previous slide
+        goToPrev()
+      }
+    }
+    touchStartX.current = null
+    touchEndX.current = null
+
+    // Resume automatic transition after touch
+    if (hasMultipleSlides) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      timerRef.current = setInterval(() => {
+        goToNext()
+      }, 5000)
+    }
+  }
+
   return (
-    <section className="relative w-full overflow-hidden bg-[#faf7f2] border-b border-border/60">
+    <section
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="relative w-full overflow-hidden bg-[#faf7f2] border-b border-border/60 select-none"
+    >
       
       {/* ═══════════════════════════════════════════════════
           FULL-WIDTH HERO BANNER CONTAINER (Desktop 16:9 & Mobile Adaptive)
