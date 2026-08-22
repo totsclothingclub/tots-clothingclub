@@ -61,7 +61,7 @@ export default function BestSellersCarousel({ products }: BestSellersCarouselPro
   }
 
   return (
-    <div className="relative group/carousel w-full max-w-[1600px] mx-auto">
+    <div className="relative group/carousel w-full max-w-[1600px] mx-auto overflow-hidden">
 
       {/* Left Navigation Arrow (Desktop & Mobile) */}
       {isMounted && canScrollLeft && (
@@ -69,7 +69,7 @@ export default function BestSellersCarousel({ products }: BestSellersCarouselPro
           type="button"
           onClick={() => scroll('left')}
           aria-label="Previous products"
-          className="absolute left-2 sm:left-4 top-[40%] -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md hover:bg-beige hover:border-gold transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95"
+          className="absolute left-1 sm:left-4 top-[40%] -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md hover:bg-beige hover:border-gold transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95"
         >
           <ChevronLeft size={18} className="stroke-[2.2]" />
         </button>
@@ -81,7 +81,7 @@ export default function BestSellersCarousel({ products }: BestSellersCarouselPro
           type="button"
           onClick={() => scroll('right')}
           aria-label="Next products"
-          className="absolute right-2 sm:right-4 top-[40%] -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md hover:bg-beige hover:border-gold transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95"
+          className="absolute right-1 sm:right-4 top-[40%] -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md hover:bg-beige hover:border-gold transition-all duration-200 flex items-center justify-center cursor-pointer active:scale-95"
         >
           <ChevronRight size={18} className="stroke-[2.2]" />
         </button>
@@ -107,13 +107,7 @@ export default function BestSellersCarousel({ products }: BestSellersCarouselPro
             <div
               key={product.id}
               data-product-card
-              /*
-               * Mobile  : Exactly 2 cards per view with 16px left/right margins and 10px gap
-               *           Width: calc((100vw - 32px padding - 10px gap) / 2) = calc(50vw - 21px)
-               * Tablet  : 3 cards: calc((100vw - 64px - 32px) / 3) ≈ calc(33.333vw - 32px)
-               * Desktop : Fixed 220px-235px card width, centered or scrollable
-               */
-              className="flex-shrink-0 snap-start w-[calc(50vw-21px)] sm:w-[calc(33.333vw-32px)] lg:w-[220px] xl:w-[235px]"
+              className="flex-shrink-0 snap-start w-[150px] xs:w-[165px] sm:w-[200px] lg:w-[220px] xl:w-[235px]"
             >
               <ProductCard product={product} />
             </div>

@@ -21,20 +21,19 @@ export default function NewsletterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-0 max-w-md mx-auto w-full">
+    <form onSubmit={handleSubmit} className="flex items-stretch max-w-md mx-auto w-full min-w-0">
       <input
         type="email"
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Enter your email address"
-        className="flex-1 px-4 py-3.5 text-sm border-y border-l outline-none focus:border-gold bg-white"
-        style={{ borderColor: 'var(--border)', color: 'var(--charcoal)' }}
+        className="flex-1 min-w-0 w-full px-3.5 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-sm border border-r-0 outline-none focus:border-gold bg-white rounded-l-lg text-charcoal placeholder:text-gray-400"
+        style={{ borderColor: 'var(--border)' }}
       />
       <button
         type="submit"
-        className="px-5 py-3.5 text-xs font-semibold uppercase tracking-widest2 transition-opacity hover:opacity-80"
-        style={{ background: 'var(--charcoal)', color: 'var(--cream)', whiteSpace: 'nowrap' }}
+        className="flex-shrink-0 px-3.5 sm:px-5 py-3 sm:py-3.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-opacity hover:opacity-80 rounded-r-lg whitespace-nowrap bg-charcoal text-cream border border-l-0 border-charcoal"
       >
         Subscribe
       </button>

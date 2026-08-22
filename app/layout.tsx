@@ -1,7 +1,13 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { CartProvider } from '@/lib/context/CartContext'
 import { WishlistProvider } from '@/lib/context/WishlistContext'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 
 export const metadata: Metadata = {
   title: 'TOTS — Premium Inclusive Fashion Brand (XS to 7XL)',
@@ -21,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="bg-cream text-charcoal min-h-screen flex flex-col antialiased" style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}>
+    <html lang="en" className="w-full max-w-full overflow-x-hidden">
+      <body className="bg-cream text-charcoal min-h-screen flex flex-col antialiased w-full max-w-full overflow-x-hidden" style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}>
         <CartProvider>
           <WishlistProvider>
             {children}
