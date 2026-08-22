@@ -159,7 +159,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
               type="button"
               onClick={prevPage}
               aria-label="Previous categories"
-              className="absolute -left-2 top-[38%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md flex items-center justify-center active:scale-95 transition-all"
+              className="absolute left-0 sm:-left-2 top-[38%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md flex items-center justify-center active:scale-95 transition-all"
             >
               <ChevronLeft size={16} className="stroke-[2.5]" />
             </button>
@@ -167,7 +167,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
               type="button"
               onClick={nextPage}
               aria-label="Next categories"
-              className="absolute -right-2 top-[38%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md flex items-center justify-center active:scale-95 transition-all"
+              className="absolute right-0 sm:-right-2 top-[38%] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 border border-border/80 text-charcoal shadow-md flex items-center justify-center active:scale-95 transition-all"
             >
               <ChevronRight size={16} className="stroke-[2.5]" />
             </button>

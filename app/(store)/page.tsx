@@ -58,10 +58,10 @@ export default async function HomePage() {
         }))
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30">
+    <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30 w-full max-w-full overflow-x-hidden">
       <Header initialCategories={categories} />
 
-      <main className="flex-1 space-y-12 lg:space-y-16 pb-16">
+      <main className="flex-1 space-y-12 lg:space-y-16 pb-16 w-full max-w-full overflow-x-hidden">
         
         {/* ═══════════════════════════════════════════════════
             1. HERO SLIDER SECTION (Functional Desktop & Mobile Slider)
@@ -364,8 +364,8 @@ export default async function HomePage() {
         {/* ═══════════════════════════════════════════════════
             8. STAY IN STYLE NEWSLETTER BAR
         ═══════════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-          <div className="bg-[#141414] text-cream rounded-2xl p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-md border border-[#222222]">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 w-full">
+          <div className="bg-[#141414] text-cream rounded-2xl p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-between gap-5 sm:gap-6 shadow-md border border-[#222222] overflow-hidden w-full">
             <div className="flex items-center gap-4 text-center lg:text-left">
               <div className="p-3 bg-[#202020] rounded-xl text-gold">
                 <Sparkles size={24} />
