@@ -46,9 +46,14 @@ export default function WishlistPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-4 lg:gap-6">
             {wishlistProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <div
+                key={product.id}
+                className="w-[calc(50%-8px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] min-w-[150px] max-w-[285px] flex-shrink-0"
+              >
+                <ProductCard product={product} />
+              </div>
             ))}
           </div>
         )}

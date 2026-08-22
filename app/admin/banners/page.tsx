@@ -93,7 +93,6 @@ export default function AdminBannersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingBanner)
       })
-      await saveBanner(editingBanner)
     } catch (err) {
       console.error(err)
     } finally {
@@ -107,7 +106,6 @@ export default function AdminBannersPage() {
       setLoading(true)
       try {
         await fetch(`/api/admin/banners?id=${id}`, { method: 'DELETE' })
-        await deleteBanner(id)
       } catch (err) {
         console.error(err)
       } finally {
@@ -374,7 +372,7 @@ export default function AdminBannersPage() {
               {/* ── Mobile Banner Image (Optional Upload or URL) ── */}
               <div className="space-y-2 pt-1 border-t border-border/60">
                 <div className="flex items-center justify-between">
-                  <label className="font-semibold text-charcoal">Mobile Banner Image (Optional)</label>
+                  <label className="font-semibold text-charcoal">Mobile Banner Image (4:5 / 9:16 Portrait — Optional)</label>
                   <div className="flex items-center gap-1 bg-beige p-0.5 rounded-lg border border-border">
                     <button
                       type="button"
@@ -423,6 +421,7 @@ export default function AdminBannersPage() {
                         <>
                           <Upload size={16} className="text-gold" />
                           <span className="font-semibold text-[11px] text-charcoal">Click to browse mobile image</span>
+                          <span className="text-[10px] text-mid">Recommended 4:5 Portrait (1080×1350) or 9:16 (1080×1920)</span>
                         </>
                       )}
                     </div>
@@ -439,7 +438,7 @@ export default function AdminBannersPage() {
 
                 {/* Mobile Preview */}
                 {editingBanner.mobile_image_url && (
-                  <div className="relative aspect-[3/2] w-32 rounded-lg overflow-hidden border border-border bg-beige mt-2">
+                  <div className="relative aspect-[4/5] w-28 rounded-lg overflow-hidden border border-border bg-beige mt-2">
                     <img
                       src={editingBanner.mobile_image_url}
                       alt="Mobile Preview"

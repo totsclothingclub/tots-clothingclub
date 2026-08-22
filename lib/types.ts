@@ -1,3 +1,5 @@
+export type NavLocation = 'navbar' | 'shop_dropdown' | 'plus_size_dropdown' | 'none'
+
 export interface Category {
   id: string
   name: string
@@ -6,9 +8,13 @@ export interface Category {
   image_url?: string
   display_order: number
   is_active: boolean
-  parent_id?: string
+  parent_id?: string | null
+  nav_location?: NavLocation
+  is_dropdown?: boolean
   created_at?: string
+  children?: Category[]
 }
+
 
 export interface ProductVariant {
   id: string
@@ -190,4 +196,29 @@ export interface DashboardStats {
   lowStockProducts: number
   todaySales: number
   monthSales: number
+}
+
+export interface InstagramPost {
+  id: string
+  image_url: string
+  tag?: string
+  post_url?: string
+  display_order: number
+  is_active: boolean
+  created_at?: string
+}
+
+export interface PromoCard {
+  id: string
+  label: string          // e.g. "SPECIAL DROP"
+  title: string          // e.g. "STYLE UNDER ₹499"
+  description?: string   // e.g. "Everything you love.\nNothing over ₹499."
+  button_text?: string   // e.g. "SHOP NOW"
+  button_url?: string    // e.g. "/shop?maxPrice=499"
+  image_url?: string     // card image
+  bg_color?: string      // e.g. "wine" | "cream" | hex
+  text_color?: string    // "white" | "dark"
+  display_order: number
+  is_active: boolean
+  created_at?: string
 }

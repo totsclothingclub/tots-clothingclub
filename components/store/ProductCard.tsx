@@ -16,7 +16,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [hovered, setHovered] = useState(false)
 
   const hasSecondary = product.images && product.images.length > 1
-  const img = hovered && hasSecondary ? product.images![1].image_url : product.primary_image
+  // Resolve the best available image: primary_image → first product_image → placeholder
+  const resolvedPrimary =
+    (product.primary_image && product.primary_image !== '/images/placeholder.jpg' && product.primary_image) ||
+    product.images?.[0]?.image_url ||
+    '/images/placeholder.jpg'
+
+  const img = hovered && hasSecondary ? (product.images![1].image_url || resolvedPrimary) : resolvedPrimary
 
   const regular = product.regular_price
   const sale    = product.sale_price
@@ -115,9 +121,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </div>
 
-          <p className="text-[10px] text-mid font-medium mt-0.5">
-            + {product.available_sizes?.length || 6} Sizes
-          </p>
+          {/* Size pills */}
+          {product.available_sizes && product.available_sizes.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1 mt-1">
+              {product.available_sizes.slice(0, 4).map(size => (
+                <span
+                  key={size}
+                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#f5efe6] text-charcoal border border-border/70"
+                >
+                  {size}
+                </span>
+              ))}
+              {product.available_sizes.length > 4 && (
+                <span className="text-[9px] text-mid font-medium">
+                  +{product.available_sizes.length - 4}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-[10px] text-mid font-medium mt-0.5">
+              XS to 7XL
+            </p>
+          )}
         </div>
       </div>
     </div>

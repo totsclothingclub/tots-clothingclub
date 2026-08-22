@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
-    description TEXT NOT NULL,
+    description TEXT DEFAULT '',
     short_description TEXT,
     category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
     brand TEXT DEFAULT 'TOTS',
@@ -48,6 +48,10 @@ CREATE TABLE IF NOT EXISTS public.products (
     is_best_seller BOOLEAN DEFAULT FALSE,
     is_sale BOOLEAN DEFAULT FALSE,
     is_plus_size BOOLEAN DEFAULT FALSE,
+    primary_image TEXT DEFAULT '',
+    available_sizes TEXT[] DEFAULT '{}',
+    rating_avg NUMERIC(3,2) DEFAULT 5.0,
+    review_count INT DEFAULT 0,
     meta_title TEXT,
     meta_description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -96,6 +100,17 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     text TEXT NOT NULL,
     link TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. INSTAGRAM GALLERY
+CREATE TABLE IF NOT EXISTS public.instagram_posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    image_url TEXT NOT NULL,
+    tag TEXT,
+    post_url TEXT DEFAULT 'https://instagram.com/tots_clothingclub',
+    display_order INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -272,6 +287,9 @@ CREATE POLICY "Allow all modify banners" ON public.banners FOR ALL USING (TRUE) 
 
 CREATE POLICY "Allow public read announcements" ON public.announcements FOR SELECT USING (TRUE);
 CREATE POLICY "Allow all modify announcements" ON public.announcements FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read instagram_posts" ON public.instagram_posts FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify instagram_posts" ON public.instagram_posts FOR ALL USING (TRUE) WITH CHECK (TRUE);
 
 -- 3. Catalog (Categories, Products, Images, Variants)
 CREATE POLICY "Allow public read categories" ON public.categories FOR SELECT USING (TRUE);

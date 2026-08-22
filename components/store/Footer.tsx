@@ -69,13 +69,13 @@ export function Footer() {
             <h4 className="text-[11px] font-bold uppercase tracking-widest text-gold">SHOP</h4>
             <ul className="space-y-2 text-xs text-gray-400">
               <li><Link href="/shop?category=new-arrivals" className="hover:text-cream transition-colors">New Arrivals</Link></li>
-              <li><Link href="/shop?sort=best-sellers" className="hover:text-cream transition-colors">Best Sellers</Link></li>
-              <li><Link href="/shop?category=plus-size" className="hover:text-cream transition-colors">Plus Size</Link></li>
-              <li><Link href="/shop?category=western-wear" className="hover:text-cream transition-colors">Western Wear</Link></li>
-              <li><Link href="/shop?category=salwar-modest-wear" className="hover:text-cream transition-colors">Salwar</Link></li>
-              <li><Link href="/shop?isSale=true" className="text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale</Link></li>
+              <li><Link href="/shop" className="hover:text-cream transition-colors">All Products</Link></li>
+              <li><Link href="/shop?category=plus-size" className="hover:text-cream transition-colors">Plus Size Collection</Link></li>
+              <li><Link href="/shop?category=salwar-sets" className="hover:text-cream transition-colors">Salwar Sets</Link></li>
+              <li><Link href="/shop?isSale=true" className="text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale & Clearance</Link></li>
             </ul>
           </div>
+
 
           {/* Help Column */}
           <div className="space-y-3">
@@ -181,11 +181,10 @@ export function Footer() {
             {openSections.shop && (
               <ul className="space-y-2.5 pb-4 text-xs text-gray-400 animate-fadein">
                 <li><Link href="/shop?category=new-arrivals" className="block hover:text-cream transition-colors">New Arrivals</Link></li>
-                <li><Link href="/shop?sort=best-sellers" className="block hover:text-cream transition-colors">Best Sellers</Link></li>
-                <li><Link href="/shop?category=plus-size" className="block hover:text-cream transition-colors">Plus Size</Link></li>
-                <li><Link href="/shop?category=western-wear" className="block hover:text-cream transition-colors">Western Wear</Link></li>
-                <li><Link href="/shop?category=salwar-modest-wear" className="block hover:text-cream transition-colors">Salwar</Link></li>
-                <li><Link href="/shop?isSale=true" className="block text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale</Link></li>
+                <li><Link href="/shop" className="block hover:text-cream transition-colors">All Products</Link></li>
+                <li><Link href="/shop?category=plus-size" className="block hover:text-cream transition-colors">Plus Size Collection</Link></li>
+                <li><Link href="/shop?category=salwar-sets" className="block hover:text-cream transition-colors">Salwar Sets</Link></li>
+                <li><Link href="/shop?isSale=true" className="block text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale & Clearance</Link></li>
               </ul>
             )}
           </div>

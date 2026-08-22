@@ -32,11 +32,7 @@ export async function uploadImageToCloudinary(
         fileData,
         {
           folder: `tots_clothing/${folder}`,
-          resource_type: 'image',
-          transformation: [
-            { quality: 'auto:good' },
-            { fetch_format: 'auto' }
-          ]
+          resource_type: 'image'
         },
         (error, result) => {
           if (error) {
@@ -58,11 +54,7 @@ export async function uploadImageToCloudinary(
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `tots_clothing/${folder}`,
-          resource_type: 'image',
-          transformation: [
-            { quality: 'auto:good' },
-            { fetch_format: 'auto' }
-          ]
+          resource_type: 'image'
         },
         (error, result) => {
           if (error) {

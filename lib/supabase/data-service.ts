@@ -2,6 +2,7 @@ import { createClient } from './client'
 import {
   Product,
   Category,
+  NavLocation,
   Banner,
   Announcement,
   Coupon,
@@ -10,8 +11,11 @@ import {
   Order,
   DashboardStats,
   ProductImage,
-  ProductVariant
+  ProductVariant,
+  InstagramPost,
+  PromoCard
 } from '../types'
+import { INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './mock-data'
 
 // Dynamic default state
 const DEFAULT_SETTINGS: StoreSettings = {
@@ -29,11 +33,18 @@ const DEFAULT_SETTINGS: StoreSettings = {
 let storeSettings: StoreSettings = { ...DEFAULT_SETTINGS }
 let announcements: Announcement[] = []
 let banners: Banner[] = []
-let categories: Category[] = []
-let products: Product[] = []
+let instagramPosts: InstagramPost[] = []
+let categories: Category[] = [...INITIAL_CATEGORIES]
+let products: Product[] = [...INITIAL_PRODUCTS]
 let coupons: Coupon[] = []
 let reviews: Review[] = []
 let orders: Order[] = []
+
+let promoCards: PromoCard[] = [
+  { id: 'promo-1', label: 'SPECIAL DROP', title: 'STYLE UNDER ₹499', description: 'Everything you love. Nothing over ₹499.', button_text: 'SHOP NOW', button_url: '/shop?maxPrice=499', image_url: '', bg_color: 'wine', text_color: 'white', display_order: 1, is_active: true },
+  { id: 'promo-2', label: 'XS TO 7XL', title: 'PLUS SIZE COLLECTION', description: 'Fashion that fits beautifully and feels amazing.', button_text: 'EXPLORE NOW', button_url: '/shop?category=plus-size', image_url: '', bg_color: 'cream', text_color: 'dark', display_order: 2, is_active: true },
+  { id: 'promo-3', label: 'NEW SEASON', title: 'NEW ARRIVALS', description: 'Fresh styles. Just for you.', button_text: 'SHOP NOW', button_url: '/shop?category=new-arrivals', image_url: '', bg_color: 'cream', text_color: 'dark', display_order: 3, is_active: true },
+]
 
 function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -210,9 +221,161 @@ export async function deleteBanner(id: string): Promise<boolean> {
 }
 
 // -------------------------------------------------------------
+// INSTAGRAM GALLERY (Cloudinary + Supabase)
+// -------------------------------------------------------------
+export async function getInstagramPosts(): Promise<InstagramPost[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('instagram_posts')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+      if (!error && data) return data as InstagramPost[]
+    } catch (e) {
+      console.warn('Supabase getInstagramPosts failed', e)
+    }
+  }
+  return instagramPosts.filter(p => p.is_active).sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function getAllInstagramPosts(): Promise<InstagramPost[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('instagram_posts')
+        .select('*')
+        .order('display_order', { ascending: true })
+      if (!error && data) {
+        instagramPosts = data as InstagramPost[]
+        return instagramPosts
+      }
+    } catch (e) {
+      console.warn('Supabase getAllInstagramPosts failed', e)
+    }
+  }
+  return instagramPosts.sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function saveInstagramPost(postData: Partial<InstagramPost>): Promise<InstagramPost> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const payload = {
+        image_url: postData.image_url || '/images/placeholder.jpg',
+        tag: postData.tag || null,
+        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+        display_order: Number(postData.display_order) || 1,
+        is_active: postData.is_active ?? true
+      }
+
+      if (postData.id && !postData.id.startsWith('ig-')) {
+        const { data, error } = await supabase
+          .from('instagram_posts')
+          .update(payload)
+          .eq('id', postData.id)
+          .select()
+          .single()
+        if (!error && data) {
+          instagramPosts = instagramPosts.map(p => (p.id === data.id ? (data as InstagramPost) : p))
+          return data as InstagramPost
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('instagram_posts')
+          .insert([payload])
+          .select()
+          .single()
+        if (!error && data) {
+          instagramPosts.push(data as InstagramPost)
+          return data as InstagramPost
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase saveInstagramPost failed', e)
+    }
+  }
+
+  // Fallback in-memory
+  if (postData.id) {
+    instagramPosts = instagramPosts.map(p => (p.id === postData.id ? ({ ...p, ...postData } as InstagramPost) : p))
+    return instagramPosts.find(p => p.id === postData.id)!
+  } else {
+    const newPost: InstagramPost = {
+      id: `ig-${Date.now()}`,
+      image_url: postData.image_url || '/images/placeholder.jpg',
+      tag: postData.tag,
+      post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+      display_order: Number(postData.display_order) || instagramPosts.length + 1,
+      is_active: postData.is_active ?? true
+    }
+    instagramPosts.push(newPost)
+    return newPost
+  }
+}
+
+export async function deleteInstagramPost(id: string): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      await supabase.from('instagram_posts').delete().eq('id', id)
+    } catch (e) {
+      console.warn('Supabase deleteInstagramPost failed', e)
+    }
+  }
+  instagramPosts = instagramPosts.filter(p => p.id !== id)
+  return true
+}
+
+export function normalizeCategory(cat: Category, allCats: Category[]): Category {
+  let nav_location: NavLocation = cat.nav_location || 'shop_dropdown'
+  let parent_id = cat.parent_id || null
+
+  const shopCat = allCats.find(c => c.slug === 'shop')
+  const plusCat = allCats.find(c => c.slug === 'plus-size')
+
+  // Top navbar categories
+  if (['new-arrivals', 'shop', 'plus-size', 'sale'].includes(cat.slug)) {
+    nav_location = 'navbar'
+    parent_id = null
+  }
+  // Plus size subcategories (including Salwar)
+  else if (
+    ['modest-wear', 'salwar', 'daily-wear', 'plus-size-bottoms'].includes(cat.slug) ||
+    (cat.slug === 'salwar' && cat.name.toLowerCase() !== 'salwar sets') ||
+    (plusCat && parent_id === plusCat.id) ||
+    parent_id === 'cat-plus-size' ||
+    cat.nav_location === 'plus_size_dropdown'
+  ) {
+    nav_location = 'plus_size_dropdown'
+    if (!parent_id && plusCat) parent_id = plusCat.id
+  }
+  // Shop dropdown categories
+  else if (
+    ['under-199', 'under-499', '99-store', 'salwar-sets', 'chikankari', 'hijabs', 'bottoms'].includes(cat.slug) ||
+    (shopCat && parent_id === shopCat.id) ||
+    parent_id === 'cat-shop' ||
+    cat.nav_location === 'shop_dropdown'
+  ) {
+    nav_location = 'shop_dropdown'
+    if (!parent_id && shopCat) parent_id = shopCat.id
+  }
+
+  return {
+    ...cat,
+    image_url: cat.image_url || '',
+    nav_location,
+    parent_id
+  }
+}
+
+// -------------------------------------------------------------
 // CATEGORIES (Cloudinary + Supabase)
 // -------------------------------------------------------------
 export async function getCategories(): Promise<Category[]> {
+  let list: Category[] = []
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
@@ -220,33 +383,52 @@ export async function getCategories(): Promise<Category[]> {
         .from('categories')
         .select('*')
         .eq('is_active', true)
+        .neq('slug', 'all-plus-size')
         .order('display_order', { ascending: true })
-      if (!error && data) return data as Category[]
+      if (!error && data && data.length > 0) {
+        list = data as Category[]
+      }
     } catch (e) {
       console.warn('Supabase getCategories failed', e)
     }
   }
-  return categories.filter(c => c.is_active).sort((a, b) => a.display_order - b.display_order)
+
+  if (list.length === 0) {
+    list = categories.filter(c => c.is_active && c.slug !== 'all-plus-size')
+  }
+
+  const filtered = list.filter(c => c.slug !== 'all-plus-size')
+  const normalized = filtered.map(c => normalizeCategory(c, filtered))
+  return normalized.sort((a, b) => a.display_order - b.display_order)
 }
 
 export async function getAllCategories(): Promise<Category[]> {
+  let list: Category[] = []
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .neq('slug', 'all-plus-size')
         .order('display_order', { ascending: true })
-      if (!error && data) {
-        categories = data as Category[]
-        return categories
+      if (!error && data && data.length > 0) {
+        list = data as Category[]
       }
     } catch (e) {
       console.warn('Supabase getAllCategories failed', e)
     }
   }
-  return categories.sort((a, b) => a.display_order - b.display_order)
+
+  if (list.length === 0) {
+    list = categories.filter(c => c.slug !== 'all-plus-size')
+  }
+
+  const filtered = list.filter(c => c.slug !== 'all-plus-size')
+  const normalized = filtered.map(c => normalizeCategory(c, filtered))
+  return normalized.sort((a, b) => a.display_order - b.display_order)
 }
+
 
 export async function saveCategory(categoryData: Partial<Category>): Promise<Category> {
   const slug = (categoryData.slug || categoryData.name || 'category')
@@ -257,13 +439,16 @@ export async function saveCategory(categoryData: Partial<Category>): Promise<Cat
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
-      const catPayload = {
+      const catPayload: any = {
         name: categoryData.name || 'New Category',
         slug: slug,
         description: categoryData.description || '',
         image_url: categoryData.image_url || '/images/placeholder.jpg',
         display_order: Number(categoryData.display_order) || 1,
-        is_active: categoryData.is_active ?? true
+        is_active: categoryData.is_active ?? true,
+        nav_location: categoryData.nav_location || 'shop_dropdown',
+        is_dropdown: categoryData.is_dropdown ?? false,
+        parent_id: categoryData.parent_id || null
       }
 
       if (categoryData.id && !categoryData.id.startsWith('cat-')) {
@@ -295,7 +480,7 @@ export async function saveCategory(categoryData: Partial<Category>): Promise<Cat
 
   // Fallback in-memory
   if (categoryData.id) {
-    categories = categories.map(c => (c.id === categoryData.id ? ({ ...c, ...categoryData } as Category) : c))
+    categories = categories.map(c => (c.id === categoryData.id ? ({ ...c, ...categoryData, slug } as Category) : c))
     return categories.find(c => c.id === categoryData.id)!
   } else {
     const newCategory: Category = {
@@ -305,7 +490,10 @@ export async function saveCategory(categoryData: Partial<Category>): Promise<Cat
       description: categoryData.description || '',
       image_url: categoryData.image_url || '/images/placeholder.jpg',
       display_order: Number(categoryData.display_order) || categories.length + 1,
-      is_active: categoryData.is_active ?? true
+      is_active: categoryData.is_active ?? true,
+      nav_location: categoryData.nav_location || 'shop_dropdown',
+      is_dropdown: categoryData.is_dropdown ?? false,
+      parent_id: categoryData.parent_id || null
     }
     categories.push(newCategory)
     return newCategory
@@ -342,7 +530,102 @@ export interface ProductFilterOptions {
   sortBy?: 'featured' | 'price-low' | 'price-high' | 'newest' | 'rating'
 }
 
+function matchesCategory(product: Product, slug: string, allCats: Category[] = categories): boolean {
+  if (!slug || slug === 'all') return true
+
+  // 1. Direct match on primary category
+  if (product.category?.slug === slug || product.category?.id === slug || product.category_id === slug) return true
+
+  // 2. Resolve target category from slug
+  const targetCategory = allCats.find(c => c.slug === slug || c.id === slug)
+  const targetName = targetCategory ? targetCategory.name.toLowerCase().trim() : slug.replace(/-/g, ' ').toLowerCase().trim()
+  const targetSlug = slug.toLowerCase().trim()
+
+  // 3. Multi-category check (checks ID, UUID, Slug, or Category Name)
+  const catIds = (product as any).category_ids || []
+  if (Array.isArray(catIds) && catIds.length > 0) {
+    const isMatched = catIds.some((item: string) => {
+      if (!item) return false
+      const itemClean = String(item).toLowerCase().trim()
+      
+      // Direct match on slug, UUID, or ID
+      if (itemClean === targetSlug || item === targetCategory?.id) return true
+
+      // Match on resolved category in allCats
+      const cat = allCats.find(c => c.id === item || c.slug === item || c.name.toLowerCase() === itemClean)
+      if (cat) {
+        if (cat.slug === targetSlug || cat.id === targetSlug || cat.id === targetCategory?.id) return true
+        if (cat.name.toLowerCase() === targetName) return true
+      }
+
+      // Name comparison (e.g. "salwar sets" === "salwar sets", "under ₹499" === "under ₹499", "under 499" === "under 499")
+      if (itemClean === targetName) return true
+      if (itemClean.replace(/[^a-z0-9]/g, '') === targetName.replace(/[^a-z0-9]/g, '')) return true
+
+      return false
+    })
+
+    if (isMatched) return true
+  }
+
+  // 4. Plus Size collection broad matching
+  if (targetSlug === 'plus-size' || targetSlug === 'all-plus-size') {
+    const isTaggedPlus = catIds.some((item: string) => {
+      const itemClean = String(item).toLowerCase()
+      const cat = allCats.find(c => c.id === item || c.slug === item || c.name.toLowerCase() === itemClean)
+      return (cat && (cat.nav_location === 'plus_size_dropdown' || cat.parent_id === 'cat-plus-size' || cat.slug.includes('plus'))) || itemClean.includes('plus')
+    })
+    return Boolean(
+      product.is_plus_size ||
+      product.category?.slug === 'plus-size' ||
+      product.category?.nav_location === 'plus_size_dropdown' ||
+      isTaggedPlus
+    )
+  }
+
+  // 5. Special categories
+  if (targetSlug === 'sale') return Boolean(product.is_sale || product.category?.slug === 'sale')
+  if (targetSlug === 'new-arrivals') return Boolean(product.is_new_arrival || product.category?.slug === 'new-arrivals')
+  if (targetSlug === 'under-199') {
+    return (product.sale_price ?? product.regular_price) <= 199 || product.category?.slug === 'under-199'
+  }
+  if (targetSlug === 'under-499') {
+    return (product.sale_price ?? product.regular_price) <= 499 || product.category?.slug === 'under-499'
+  }
+  if (targetSlug === '99-store') {
+    return (product.sale_price ?? product.regular_price) <= 99 || product.category?.slug === '99-store'
+  }
+
+  // 6. Subcategory fallbacks
+  const name = product.name?.toLowerCase() || ''
+  const desc = product.description?.toLowerCase() || ''
+  if (slug === 'modest-wear' || slug === 'plus-size-modest-wear') {
+    return (product.is_plus_size || product.category?.nav_location === 'plus_size_dropdown') &&
+      (name.includes('maxi') || name.includes('dress') || name.includes('abaya') || desc.includes('modest'))
+  }
+  if (slug === 'salwar' || slug === 'plus-size-salwar' || slug === 'salwar-sets') {
+    return name.includes('kurta') || name.includes('salwar') || desc.includes('kurta')
+  }
+  if (slug === 'daily-wear' || slug === 'plus-size-daily-wear') {
+    return (product.is_plus_size || product.category?.nav_location === 'plus_size_dropdown') &&
+      (name.includes('shirt') || name.includes('top') || name.includes('casual') || name.includes('cotton'))
+  }
+  if (slug === 'bottoms' || slug === 'plus-size-bottoms') {
+    return name.includes('bottom') || name.includes('pant') || name.includes('trouser') || desc.includes('trousers')
+  }
+  if (slug === 'chikankari') {
+    return name.includes('chikankari') || desc.includes('chikankari') || name.includes('embroidered')
+  }
+  if (slug === 'hijabs') {
+    return name.includes('hijab') || desc.includes('hijab') || name.includes('abaya')
+  }
+
+  return false
+}
+
 export async function getProducts(options: ProductFilterOptions = {}): Promise<Product[]> {
+  const currentCategories = await getCategories()
+
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
@@ -365,7 +648,7 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
       if (!error && data) {
         let list = data as Product[]
         if (options.categorySlug && options.categorySlug !== 'all') {
-          list = list.filter(p => p.category?.slug === options.categorySlug)
+          list = list.filter(p => matchesCategory(p, options.categorySlug!, currentCategories))
         }
         if (options.searchQuery && options.searchQuery.trim()) {
           const q = options.searchQuery.toLowerCase().trim()
@@ -387,7 +670,7 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
   let result = [...products].filter(p => p.status === 'published')
 
   if (options.categorySlug && options.categorySlug !== 'all') {
-    result = result.filter(p => p.category?.slug === options.categorySlug)
+    result = result.filter(p => matchesCategory(p, options.categorySlug!, currentCategories))
   }
 
   if (options.size && options.size !== 'all') {
@@ -422,6 +705,7 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
   if (options.isSale) {
     result = result.filter(p => p.is_sale)
   }
+
 
   if (options.searchQuery && options.searchQuery.trim() !== '') {
     const q = options.searchQuery.toLowerCase().trim()
@@ -560,7 +844,8 @@ export async function saveProduct(productData: Partial<Product>): Promise<Produc
         is_best_seller: productData.is_best_seller ?? false,
         is_sale: productData.is_sale ?? false,
         is_plus_size: productData.is_plus_size ?? true,
-        primary_image: primaryImg
+        primary_image: primaryImg,
+        available_sizes: productData.available_sizes || ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
       }
 
       let savedProduct: any = null
@@ -1053,4 +1338,117 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     todaySales: Math.round(todaySales),
     monthSales: Math.round(totalSales)
   }
+}
+
+// -------------------------------------------------------------
+// PROMO CARDS
+// -------------------------------------------------------------
+export async function getActivePromoCards(): Promise<PromoCard[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('promo_cards')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+      if (!error && data) return data as PromoCard[]
+    } catch (e) {
+      console.warn('Supabase getActivePromoCards failed', e)
+    }
+  }
+  return promoCards.filter(c => c.is_active).sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function getAllPromoCards(): Promise<PromoCard[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('promo_cards')
+        .select('*')
+        .order('display_order', { ascending: true })
+      if (!error && data) return data as PromoCard[]
+    } catch (e) {
+      console.warn('Supabase getAllPromoCards failed', e)
+    }
+  }
+  return promoCards.sort((a, b) => a.display_order - b.display_order)
+}
+
+export async function savePromoCard(cardData: Partial<PromoCard>): Promise<PromoCard> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const payload: any = {
+        label: cardData.label || '',
+        title: cardData.title || '',
+        description: cardData.description || '',
+        button_text: cardData.button_text || 'SHOP NOW',
+        button_url: cardData.button_url || '/shop',
+        image_url: cardData.image_url || '',
+        bg_color: cardData.bg_color || 'cream',
+        text_color: cardData.text_color || 'dark',
+        display_order: cardData.display_order ?? 0,
+        is_active: cardData.is_active ?? true
+      }
+
+      if (cardData.id && !cardData.id.startsWith('promo-')) {
+        const { data, error } = await supabase
+          .from('promo_cards')
+          .update(payload)
+          .eq('id', cardData.id)
+          .select()
+          .single()
+        if (!error && data) return data as PromoCard
+      } else {
+        const { data, error } = await supabase
+          .from('promo_cards')
+          .insert([payload])
+          .select()
+          .single()
+        if (!error && data) return data as PromoCard
+      }
+    } catch (e) {
+      console.warn('Supabase savePromoCard failed', e)
+    }
+  }
+
+  // Fallback in-memory
+  if (cardData.id) {
+    promoCards = promoCards.map(c =>
+      c.id === cardData.id ? { ...c, ...cardData } as PromoCard : c
+    )
+    return promoCards.find(c => c.id === cardData.id)!
+  } else {
+    const newCard: PromoCard = {
+      id: `promo-${Date.now()}`,
+      label: cardData.label || '',
+      title: cardData.title || '',
+      description: cardData.description || '',
+      button_text: cardData.button_text || 'SHOP NOW',
+      button_url: cardData.button_url || '/shop',
+      image_url: cardData.image_url || '',
+      bg_color: cardData.bg_color || 'cream',
+      text_color: cardData.text_color || 'dark',
+      display_order: cardData.display_order ?? promoCards.length + 1,
+      is_active: cardData.is_active ?? true,
+      created_at: new Date().toISOString()
+    }
+    promoCards.push(newCard)
+    return newCard
+  }
+}
+
+export async function deletePromoCard(id: string): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      await supabase.from('promo_cards').delete().eq('id', id)
+    } catch (e) {
+      console.warn('Supabase deletePromoCard failed', e)
+    }
+  }
+  promoCards = promoCards.filter(c => c.id !== id)
+  return true
 }
