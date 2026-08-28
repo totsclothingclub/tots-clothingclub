@@ -1,13 +1,29 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Header from '@/components/store/Header'
 import { Footer } from '@/components/store/Footer'
 import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { useCart } from '@/lib/context/CartContext'
-import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck } from 'lucide-react'
+import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck, AlertCircle } from 'lucide-react'
 import { validateCoupon } from '@/lib/supabase/data-service'
+
+// Helper function to load Razorpay Standard Web Checkout script dynamically
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true)
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart()
@@ -15,7 +31,7 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     full_name: 'Simran Kaur',
     email: 'simran.k@example.com',
-    phone: '+91 98765 12345',
+    phone: '+91 85940 41490',
     street: '42 Lotus Boulevard, Sector 128',
     apartment: 'Apt 402',
     city: 'Noida',
@@ -29,11 +45,16 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0)
   const [couponMessage, setCouponMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const [completedOrder, setCompletedOrder] = useState<any>(null)
 
   const shippingFee = 80
   const tax = Math.round((subtotal - discount) * 0.05)
   const grandTotal = Math.max(0, subtotal - discount + shippingFee + tax)
+
+  useEffect(() => {
+    loadRazorpayScript()
+  }, [])
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,56 +74,130 @@ export default function CheckoutPage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage('')
+
+    if (items.length === 0) {
+      setErrorMessage('Your cart is empty. Please add items before checkout.')
+      return
+    }
+
     setIsProcessing(true)
 
     try {
-      // 1. Create order on server
+      // 1. Ensure Razorpay SDK script is loaded
+      const isLoaded = await loadRazorpayScript()
+      if (!isLoaded) {
+        throw new Error('Razorpay SDK failed to load. Please check your internet connection.')
+      }
+
+      // 2. Call backend to create Razorpay Order
       const createRes = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items,
           couponCode,
-          shippingAddress: formData
-        })
+          shippingAddress: formData,
+        }),
       })
+
       const createData = await createRes.json()
 
-      // 2. Simulate Razorpay / UPI / COD Payment Verification
-      const verifyRes = await fetch('/api/payment/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpay_order_id: createData.orderId,
-          razorpay_payment_id: `pay_${Math.random().toString(36).substring(2, 10)}`,
-          razorpay_signature: 'valid_signature',
-          customerDetails: formData,
-          items,
-          subtotal,
-          discount,
-          shippingFee,
-          tax,
-          total: grandTotal,
-          paymentMethod
-        })
+      if (!createRes.ok || !createData.success || (!createData.orderId && !createData.order_id)) {
+        throw new Error(createData.error || 'Failed to initialize payment order with gateway.')
+      }
+
+      const orderId = createData.orderId || createData.order_id
+      const razorpayKey = createData.keyId || createData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+
+      // 3. Configure Razorpay Standard Web Checkout Modal
+      const options = {
+        key: razorpayKey,
+        amount: createData.amount, // in paise
+        currency: createData.currency || 'INR',
+        name: 'TOTS Clothing Club',
+        description: `Order for ${items.length} item(s)`,
+        image: '/images/tots-logo.png',
+        order_id: orderId,
+        handler: async function (response: {
+          razorpay_payment_id: string
+          razorpay_order_id: string
+          razorpay_signature: string
+        }) {
+          try {
+            setIsProcessing(true)
+            // 4. Send payment signature to backend verification endpoint
+            const verifyRes = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                customerDetails: formData,
+                items,
+                subtotal,
+                discount,
+                shippingFee,
+                tax,
+                total: grandTotal,
+                paymentMethod,
+              }),
+            })
+
+            const verifyData = await verifyRes.json()
+
+            if (verifyRes.ok && verifyData.success) {
+              setCompletedOrder({
+                orderNumber: verifyData.orderNumber,
+                paymentId: response.razorpay_payment_id,
+                total: grandTotal,
+                email: formData.email,
+                phone: formData.phone,
+              })
+              clearCart()
+            } else {
+              setErrorMessage(
+                verifyData.error || 'Payment verification failed. Please contact support with Payment ID: ' + response.razorpay_payment_id
+              )
+            }
+          } catch (err: any) {
+            console.error('Verification error:', err)
+            setErrorMessage('Payment verification error. If money was deducted, our team will verify your order.')
+          } finally {
+            setIsProcessing(false)
+          }
+        },
+        prefill: {
+          name: formData.full_name,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        notes: {
+          shipping_address: `${formData.street}, ${formData.apartment ? formData.apartment + ', ' : ''}${formData.city}, ${formData.state} - ${formData.pincode}`,
+        },
+        theme: {
+          color: '#7b1f35', // TOTS Wine brand color
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessing(false)
+          },
+        },
+      }
+
+      const rzp = new (window as any).Razorpay(options)
+
+      rzp.on('payment.failed', function (resp: any) {
+        setIsProcessing(false)
+        setErrorMessage(resp.error?.description || 'Payment Failed. Please try another card/UPI mode.')
       })
 
-      const verifyData = await verifyRes.json()
-
-      if (verifyData.success) {
-        setCompletedOrder({
-          orderNumber: verifyData.orderNumber,
-          total: grandTotal,
-          email: formData.email,
-          phone: formData.phone
-        })
-        clearCart()
-      }
-    } catch (err) {
-      console.error(err)
-      alert('Order placement failed. Please try again.')
-    } finally {
+      rzp.open()
+    } catch (err: any) {
+      console.error('Checkout error:', err)
       setIsProcessing(false)
+      setErrorMessage(err?.message || 'Could not launch payment gateway. Please try again.')
     }
   }
 
@@ -118,7 +213,7 @@ export default function CheckoutPage() {
           <div className="space-y-2">
             <h1 className="font-serif text-3xl font-bold text-tots-dark">Order Confirmed!</h1>
             <p className="text-sm text-tots-gray">
-              Thank you for shopping with <strong>TOTS</strong>. We are preparing your inclusive fashion fit.
+              Thank you for shopping with <strong>TOTS</strong>. Your payment was verified securely.
             </p>
           </div>
 
@@ -127,9 +222,15 @@ export default function CheckoutPage() {
               <span className="text-tots-gray">Order Number:</span>
               <strong className="text-tots-wine text-sm">{completedOrder.orderNumber}</strong>
             </div>
+            {completedOrder.paymentId && (
+              <div className="flex justify-between border-b border-tots-border pb-2">
+                <span className="text-tots-gray">Razorpay Payment ID:</span>
+                <code className="bg-[#faf7f2] px-1.5 py-0.5 rounded text-charcoal border border-border">{completedOrder.paymentId}</code>
+              </div>
+            )}
             <div className="flex justify-between border-b border-tots-border pb-2">
               <span className="text-tots-gray">Payment Method:</span>
-              <strong className="text-tots-dark">{paymentMethod}</strong>
+              <strong className="text-tots-dark">Razorpay Online Payment</strong>
             </div>
             <div className="flex justify-between border-b border-tots-border pb-2">
               <span className="text-tots-gray">Total Paid:</span>
@@ -143,7 +244,7 @@ export default function CheckoutPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Link
-              href="/account/orders"
+              href="/track-order"
               className="flex-1 bg-tots-dark text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl hover:bg-tots-gold transition-colors"
             >
               Track Order Status
@@ -186,6 +287,16 @@ export default function CheckoutPage() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 lg:px-12 py-8 space-y-8 pb-24">
         <h1 className="font-serif text-3xl font-bold text-tots-dark">Express Checkout</h1>
+
+        {errorMessage && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Payment Notification</p>
+              <p>{errorMessage}</p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
@@ -423,14 +534,14 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={isProcessing}
-              className="w-full bg-tots-wine text-white text-xs uppercase font-bold tracking-widest py-4 rounded-xl hover:bg-tots-wine-hover transition-colors shadow-lg flex items-center justify-center gap-2"
+              className="w-full bg-tots-wine text-white text-xs uppercase font-bold tracking-widest py-4 rounded-xl hover:bg-tots-wine-hover transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isProcessing ? 'Processing Secure Payment...' : `PAY ₹${grandTotal} & PLACE ORDER`}
+              {isProcessing ? 'Processing Secure Payment...' : `PAY ₹${grandTotal} WITH RAZORPAY`}
             </button>
 
             <div className="flex items-center justify-center gap-2 text-tots-gray text-[11px] pt-1">
               <Lock className="w-4 h-4 text-tots-gold" />
-              <span>256-Bit SSL Encrypted Payment Gateways</span>
+              <span>256-Bit SSL Encrypted Razorpay Checkout</span>
             </div>
           </div>
 
