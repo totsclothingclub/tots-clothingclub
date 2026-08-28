@@ -4,11 +4,11 @@ export const INITIAL_SETTINGS: StoreSettings = {
   id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   store_name: 'TOTS',
   logo_url: '/images/tots-logo.png',
-  support_email: 'care@totsfashion.com',
-  support_phone: '+91 98765 43210',
+  support_email: 'support@totsclothingclub.com',
+  support_phone: '+91 85940 41490',
   currency: '₹',
   free_shipping_threshold: 999.00,
-  standard_shipping_fee: 99.00,
+  standard_shipping_fee: 80.00,
   instagram_handle: '@tots_clothingclub'
 }
 
