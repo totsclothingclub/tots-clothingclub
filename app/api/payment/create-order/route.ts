@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const shippingFee = subtotal >= 999 ? 0 : 99
+    const shippingFee = 80
     const tax = Math.round((subtotal - discount) * 0.05) // 5% GST
     const total = Math.max(0, subtotal - discount + shippingFee + tax)
 

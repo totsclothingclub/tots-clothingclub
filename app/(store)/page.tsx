@@ -328,35 +328,35 @@ export default async function HomePage() {
         <section className="hidden md:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
           <div className="grid grid-cols-5 gap-4 py-8 border-y border-border text-center">
             
-            <div className="flex flex-col items-center gap-1.5 p-2">
+            <Link href="/shipping-policy" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <Truck size={20} className="text-gold" />
-              <h5 className="font-serif text-xs font-bold text-charcoal uppercase">FAST DELIVERY</h5>
-              <p className="text-[11px] text-mid">Across India</p>
-            </div>
+              <h5 className="font-serif text-xs font-bold text-charcoal uppercase">HOME DELIVERY</h5>
+              <p className="text-[11px] text-mid">₹80 Courier Shipping</p>
+            </Link>
 
-            <div className="flex flex-col items-center gap-1.5 p-2">
+            <Link href="/return-policy" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <RefreshCw size={20} className="text-gold" />
               <h5 className="font-serif text-xs font-bold text-charcoal uppercase">EASY RETURNS</h5>
-              <p className="text-[11px] text-mid">7 Days Easy Returns</p>
-            </div>
+              <p className="text-[11px] text-mid">Unboxing Video Verified</p>
+            </Link>
 
-            <div className="flex flex-col items-center gap-1.5 p-2">
+            <Link href="/payment-policy" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <ShieldCheck size={20} className="text-gold" />
               <h5 className="font-serif text-xs font-bold text-charcoal uppercase">SECURE PAYMENT</h5>
-              <p className="text-[11px] text-mid">100% Secure Checkout</p>
-            </div>
+              <p className="text-[11px] text-mid">Razorpay 256-Bit Encrypted</p>
+            </Link>
 
-            <div className="flex flex-col items-center gap-1.5 p-2">
+            <Link href="/payment-policy" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <CreditCard size={20} className="text-gold" />
-              <h5 className="font-serif text-xs font-bold text-charcoal uppercase">CASH ON DELIVERY</h5>
-              <p className="text-[11px] text-mid">Available</p>
-            </div>
+              <h5 className="font-serif text-xs font-bold text-charcoal uppercase">ONLINE ONLY</h5>
+              <p className="text-[11px] text-mid">UPI, Cards & Net Banking</p>
+            </Link>
 
-            <div className="flex flex-col items-center gap-1.5 p-2">
+            <Link href="/size-guide" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <Crown size={20} className="text-gold" />
               <h5 className="font-serif text-xs font-bold text-charcoal uppercase">SIZE INCLUSIVE</h5>
-              <p className="text-[11px] text-mid">XS to 7XL</p>
-            </div>
+              <p className="text-[11px] text-mid">XS to 7XL Silhouettes</p>
+            </Link>
 
           </div>
         </section>

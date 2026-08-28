@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
     store_name TEXT DEFAULT 'TOTS',
     logo_url TEXT,
     support_email TEXT DEFAULT 'support@totsfashion.com',
-    support_phone TEXT DEFAULT '+91 98765 43210',
+    support_phone TEXT DEFAULT '+91 85940 41490',
     currency TEXT DEFAULT '₹',
     free_shipping_threshold NUMERIC(10, 2) DEFAULT 999.00,
     standard_shipping_fee NUMERIC(10, 2) DEFAULT 99.00,

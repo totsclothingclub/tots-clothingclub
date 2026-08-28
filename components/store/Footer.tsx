@@ -51,7 +51,7 @@ export function Footer() {
                 <Instagram size={15} />
               </a>
               <a
-                href="https://wa.me/"
+                href="https://wa.me/918594041490"
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-gray-400 hover:text-emerald-400 hover:border-emerald-400 transition-colors"
@@ -81,12 +81,12 @@ export function Footer() {
           <div className="space-y-3">
             <h4 className="text-[11px] font-bold uppercase tracking-widest text-gold">HELP</h4>
             <ul className="space-y-2 text-xs text-gray-400">
-              <li><Link href="/account" className="hover:text-cream transition-colors">Contact Us</Link></li>
-              <li><Link href="/account/orders" className="hover:text-cream transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/account/orders" className="hover:text-cream transition-colors">Returns & Refunds</Link></li>
-              <li><Link href="/account/orders" className="hover:text-cream transition-colors">Track Order</Link></li>
-              <li><Link href="/shop" className="hover:text-cream transition-colors">FAQs</Link></li>
-              <li><Link href="/shop" className="hover:text-cream transition-colors">Size Guide</Link></li>
+              <li><Link href="/contact" className="hover:text-cream transition-colors">Contact Us</Link></li>
+              <li><Link href="/shipping-policy" className="hover:text-cream transition-colors">Shipping Policy (₹80)</Link></li>
+              <li><Link href="/return-policy" className="hover:text-cream transition-colors">Returns & Refunds</Link></li>
+              <li><Link href="/track-order" className="hover:text-cream transition-colors">Track Order</Link></li>
+              <li><Link href="/faqs" className="hover:text-cream transition-colors">FAQs</Link></li>
+              <li><Link href="/size-guide" className="hover:text-cream transition-colors">Size Guide (XS–7XL)</Link></li>
             </ul>
           </div>
 
@@ -94,10 +94,10 @@ export function Footer() {
           <div className="space-y-3">
             <h4 className="text-[11px] font-bold uppercase tracking-widest text-gold">INFORMATION</h4>
             <ul className="space-y-2 text-xs text-gray-400">
-              <li><Link href="/shop" className="hover:text-cream transition-colors">About Us</Link></li>
-              <li><Link href="/shop" className="hover:text-cream transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/shop" className="hover:text-cream transition-colors">Terms & Conditions</Link></li>
-              <li><Link href="/shop" className="hover:text-cream transition-colors">Payment Policy</Link></li>
+              <li><Link href="/about-us" className="hover:text-cream transition-colors">About Us</Link></li>
+              <li><Link href="/privacy-policy" className="hover:text-cream transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms-and-conditions" className="hover:text-cream transition-colors">Terms & Conditions</Link></li>
+              <li><Link href="/payment-policy" className="hover:text-cream transition-colors">Payment Policy</Link></li>
               <li><Link href="/admin" className="text-gold hover:underline font-semibold transition-colors">Admin Panel</Link></li>
             </ul>
           </div>
@@ -108,15 +108,15 @@ export function Footer() {
             <div className="space-y-2">
               <p className="flex items-center gap-2 text-gray-300">
                 <Phone size={13} className="text-gold" />
-                <span>+91 98765 43210</span>
+                <a href="tel:+918594041490" className="hover:text-white transition-colors">+91 85940 41490</a>
               </p>
               <p className="flex items-center gap-2 text-gray-300">
                 <Mail size={13} className="text-gold" />
-                <span>support@totsclothingclub.com</span>
+                <a href="mailto:support@totsclothingclub.com" className="hover:text-white transition-colors">support@totsclothingclub.com</a>
               </p>
               <p className="flex items-start gap-2 text-gray-400">
                 <MapPin size={13} className="text-gold flex-shrink-0 mt-0.5" />
-                <span>Guruvayoor, Kerala, India</span>
+                <span>Guruvayoor, Kerala, India — 680101</span>
               </p>
             </div>
           </div>
@@ -151,7 +151,7 @@ export function Footer() {
                 <Instagram size={14} />
               </a>
               <a
-                href="https://wa.me/"
+                href="https://wa.me/918594041490"
                 target="_blank"
                 rel="noreferrer"
                 className="w-8 h-8 rounded-full bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-gray-400 hover:text-emerald-400 hover:border-emerald-400 transition-colors"
@@ -205,12 +205,12 @@ export function Footer() {
             </button>
             {openSections.help && (
               <ul className="space-y-2.5 pb-4 text-xs text-gray-400 animate-fadein">
-                <li><Link href="/account" className="block hover:text-cream transition-colors">Contact Us</Link></li>
-                <li><Link href="/account/orders" className="block hover:text-cream transition-colors">Shipping Policy</Link></li>
-                <li><Link href="/account/orders" className="block hover:text-cream transition-colors">Returns & Refunds</Link></li>
-                <li><Link href="/account/orders" className="block hover:text-cream transition-colors">Track Order</Link></li>
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">FAQs</Link></li>
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">Size Guide</Link></li>
+                <li><Link href="/contact" className="block hover:text-cream transition-colors">Contact Us</Link></li>
+                <li><Link href="/shipping-policy" className="block hover:text-cream transition-colors">Shipping Policy (₹80)</Link></li>
+                <li><Link href="/return-policy" className="block hover:text-cream transition-colors">Returns & Refunds</Link></li>
+                <li><Link href="/track-order" className="block hover:text-cream transition-colors">Track Order</Link></li>
+                <li><Link href="/faqs" className="block hover:text-cream transition-colors">FAQs</Link></li>
+                <li><Link href="/size-guide" className="block hover:text-cream transition-colors">Size Guide (XS–7XL)</Link></li>
               </ul>
             )}
           </div>
@@ -231,10 +231,10 @@ export function Footer() {
             </button>
             {openSections.info && (
               <ul className="space-y-2.5 pb-4 text-xs text-gray-400 animate-fadein">
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">About Us</Link></li>
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">Terms & Conditions</Link></li>
-                <li><Link href="/shop" className="block hover:text-cream transition-colors">Payment Policy</Link></li>
+                <li><Link href="/about-us" className="block hover:text-cream transition-colors">About Us</Link></li>
+                <li><Link href="/privacy-policy" className="block hover:text-cream transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms-and-conditions" className="block hover:text-cream transition-colors">Terms & Conditions</Link></li>
+                <li><Link href="/payment-policy" className="block hover:text-cream transition-colors">Payment Policy</Link></li>
                 <li><Link href="/admin" className="block text-gold hover:underline font-semibold transition-colors">Admin Panel</Link></li>
               </ul>
             )}
@@ -258,15 +258,15 @@ export function Footer() {
               <div className="space-y-2 pb-4 text-xs text-gray-400 animate-fadein">
                 <p className="flex items-center gap-2 text-gray-300">
                   <Phone size={13} className="text-gold" />
-                  <span>+91 98765 43210</span>
+                  <a href="tel:+918594041490" className="hover:text-white transition-colors">+91 85940 41490</a>
                 </p>
                 <p className="flex items-center gap-2 text-gray-300">
                   <Mail size={13} className="text-gold" />
-                  <span>support@totsclothingclub.com</span>
+                  <a href="mailto:support@totsclothingclub.com" className="hover:text-white transition-colors">support@totsclothingclub.com</a>
                 </p>
                 <p className="flex items-start gap-2 text-gray-400">
                   <MapPin size={13} className="text-gold flex-shrink-0 mt-0.5" />
-                  <span>Guruvayoor, Kerala, India</span>
+                  <span>Guruvayoor, Kerala, India — 680101</span>
                 </p>
               </div>
             )}
@@ -280,18 +280,19 @@ export function Footer() {
           
           {/* Payment Badges */}
           <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 flex-wrap">
+            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c] text-gold">Razorpay</span>
             <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">UPI</span>
             <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">VISA</span>
             <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">Mastercard</span>
             <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">RuPay</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">COD</span>
+            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">Net Banking</span>
           </div>
         </div>
       </footer>
 
       {/* Floating WhatsApp Action Button on Bottom Right */}
       <a
-        href="https://wa.me/"
+        href="https://wa.me/918594041490"
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-20 lg:bottom-6 right-5 z-40 w-12 h-12 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
