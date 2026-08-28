@@ -14,7 +14,7 @@ INSERT INTO public.store_settings (
   'TOTS',
   '/images/tots-logo.png',
   'care@totsfashion.com',
-  '+91 98765 43210',
+  '+91 85940 41490',
   '₹',
   999.00,
   99.00,

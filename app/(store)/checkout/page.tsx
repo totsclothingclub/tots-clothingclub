@@ -24,14 +24,14 @@ export default function CheckoutPage() {
     country: 'India'
   })
 
-  const [paymentMethod, setPaymentMethod] = useState<'Razorpay' | 'UPI' | 'COD'>('Razorpay')
+  const [paymentMethod, setPaymentMethod] = useState<'Razorpay' | 'UPI'>('Razorpay')
   const [couponCode, setCouponCode] = useState('')
   const [discount, setDiscount] = useState(0)
   const [couponMessage, setCouponMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [completedOrder, setCompletedOrder] = useState<any>(null)
 
-  const shippingFee = subtotal >= 999 ? 0 : 99
+  const shippingFee = 80
   const tax = Math.round((subtotal - discount) * 0.05)
   const grandTotal = Math.max(0, subtotal - discount + shippingFee + tax)
 
@@ -299,14 +299,18 @@ export default function CheckoutPage() {
 
             {/* Payment Method Selector */}
             <div className="bg-white p-6 rounded-2xl border border-tots-border shadow-xs space-y-4">
-              <h2 className="font-serif text-xl font-bold text-tots-dark border-b border-tots-border pb-3">
-                3. Payment Method
-              </h2>
+              <div className="border-b border-tots-border pb-3 flex items-center justify-between">
+                <h2 className="font-serif text-xl font-bold text-tots-dark">
+                  3. Payment Method
+                </h2>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Online Payment Only
+                </span>
+              </div>
               <div className="space-y-3">
                 {[
-                  { id: 'Razorpay', label: 'Razorpay Online (Cards, NetBanking, Wallet)', sub: 'Fast & Encrypted' },
-                  { id: 'UPI', label: 'UPI (GPay / PhonePe / Paytm / BHIM)', sub: 'Instant Zero Fee' },
-                  { id: 'COD', label: 'Cash on Delivery (COD)', sub: 'Pay upon delivery' },
+                  { id: 'Razorpay', label: 'Razorpay Online (UPI, Cards, NetBanking, Wallets)', sub: 'Fast, Encrypted & Instant Confirmation' },
+                  { id: 'UPI', label: 'UPI Direct (GPay / PhonePe / Paytm / BHIM)', sub: 'Zero Payment Surcharge' },
                 ].map(opt => (
                   <label
                     key={opt.id}
@@ -329,6 +333,17 @@ export default function CheckoutPage() {
                     </div>
                   </label>
                 ))}
+              </div>
+
+              {/* Notice on COD & Unboxing Video */}
+              <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <span>ℹ️ Payment & Return Notice:</span>
+                </p>
+                <p className="text-[11px] text-amber-800 leading-normal">
+                  • <strong>Cash on Delivery (COD)</strong> is currently not available.<br />
+                  • Remember: An unedited <strong>opening/unboxing video</strong> is mandatory for any return or damage claims upon delivery.
+                </p>
               </div>
             </div>
 
@@ -393,7 +408,7 @@ export default function CheckoutPage() {
               )}
               <div className="flex justify-between">
                 <span>Shipping Fee</span>
-                <span>{shippingFee === 0 ? <strong className="text-emerald-700">FREE</strong> : `₹${shippingFee}`}</span>
+                <span className="font-semibold text-tots-dark">₹{shippingFee}</span>
               </div>
               <div className="flex justify-between">
                 <span>GST Tax (5%)</span>

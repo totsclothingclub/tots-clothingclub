@@ -176,7 +176,7 @@ export function Header({ initialCategories }: HeaderProps) {
               <Instagram size={13} />
             </a>
             <a
-              href="https://wa.me/"
+              href="https://wa.me/918594041490"
               target="_blank"
               rel="noreferrer"
               className="hover:text-emerald-400 transition-colors"
