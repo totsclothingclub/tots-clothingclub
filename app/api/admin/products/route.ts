@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
+      const stockQty = typeof productData.stock_quantity === 'number' ? Number(productData.stock_quantity) : 25
+
       const productPayload: any = {
         name: productData.name || 'New Product',
         slug: slug,
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
         sale_price: productData.sale_price ? Number(productData.sale_price) : null,
         discount_percent: productData.discount_percent || 0,
         tax_percent: productData.tax_percent || 5.0,
+        stock_quantity: stockQty,
         status: productData.status || 'published',
         is_featured: productData.is_featured ?? false,
         is_new_arrival: productData.is_new_arrival ?? true,
@@ -68,8 +71,9 @@ export async function POST(req: NextRequest) {
           .single()
         
         if (error) {
-          // If error occurs because category_ids column does not exist yet in Supabase, retry without category_ids
+          // If error occurs because category_ids or stock_quantity column does not exist yet, retry
           delete productPayload.category_ids
+          if (error.message?.includes('stock_quantity')) delete productPayload.stock_quantity
           const retry = await supabase
             .from('products')
             .update(productPayload)
@@ -93,8 +97,9 @@ export async function POST(req: NextRequest) {
           .single()
 
         if (error) {
-          // If error occurs because category_ids column does not exist yet in Supabase, retry without category_ids
+          // If error occurs because category_ids or stock_quantity column does not exist yet, retry
           delete productPayload.category_ids
+          if (error.message?.includes('stock_quantity')) delete productPayload.stock_quantity
           const retry = await supabase
             .from('products')
             .insert([productPayload])

@@ -7,8 +7,9 @@ import { ProductCard } from '@/components/store/ProductCard'
 import BestSellersCarousel from '@/components/store/BestSellersCarousel'
 import HeroSlider from '@/components/store/HeroSlider'
 import HomeCategoryCarousel from '@/components/store/HomeCategoryCarousel'
+import InstagramReelsGallery from '@/components/store/InstagramReelsGallery'
 import NewsletterForm from '@/components/store/NewsletterForm'
-import { getActiveBanners, getCategories, getProducts, getInstagramPosts, getActivePromoCards } from '@/lib/supabase/data-service'
+import { getActiveBanners, getCategories, getProducts, getInstagramPosts, getActivePromoCards, getStoreSettings } from '@/lib/supabase/data-service'
 import {
   ArrowRight,
   Truck,
@@ -27,35 +28,20 @@ import {
 export const revalidate = 0
 
 export default async function HomePage() {
-  const [banners, rawCategories, products, allProducts, dynamicIgPosts, promoCards] = await Promise.all([
+  const [banners, rawCategories, products, allProducts, dynamicIgPosts, promoCards, storeSettings] = await Promise.all([
     getActiveBanners(),
     getCategories(),
     getProducts({ isBestSeller: true }),
     getProducts(),
     getInstagramPosts(),
-    getActivePromoCards()
+    getActivePromoCards(),
+    getStoreSettings()
   ])
 
   const categories = (rawCategories || []).filter(c => c.is_active).sort((a, b) => a.display_order - b.display_order)
 
   // 6 Best Sellers for desktop (matching reference layout)
   const bestSellers = (products && products.length > 0 ? products : allProducts).slice(0, 6)
-
-  // Dynamic gallery photos from Instagram admin posts or real products
-  const igPhotos = dynamicIgPosts && dynamicIgPosts.length > 0
-    ? dynamicIgPosts.slice(0, 8).map(p => ({
-        url: p.image_url,
-        tag: p.tag,
-        post_url: p.post_url || 'https://instagram.com/tots_clothingclub'
-      }))
-    : allProducts
-        .filter(p => p.primary_image && !p.primary_image.includes('placeholder'))
-        .slice(0, 8)
-        .map(p => ({
-          url: p.primary_image,
-          tag: p.sale_price ? `₹${p.sale_price}` : null,
-          post_url: 'https://instagram.com/tots_clothingclub'
-        }))
 
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2] text-charcoal selection:bg-gold/30">
@@ -258,68 +244,13 @@ export default async function HomePage() {
 
 
         {/* ═══════════════════════════════════════════════════
-            6. SEEN ON INSTAGRAM GALLERY (100% Dynamic)
+            6. SEEN ON INSTAGRAM / REELS GALLERY (100% Dynamic)
         ═══════════════════════════════════════════════════ */}
-        {igPhotos.length > 0 && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 text-center">
-            <div className="space-y-0.5">
-              <h2 className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold tracking-wider text-charcoal uppercase">
-                SEEN ON INSTAGRAM
-              </h2>
-              <p className="text-[11px] sm:text-xs text-gold-dark font-medium">@tots_clothingclub</p>
-            </div>
-
-            {/* Dynamically centered cards: 1, 2, 3... 8 items are always centered and balanced */}
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5">
-              {igPhotos.map((item, idx) => (
-                <a
-                  key={idx}
-                  href={item.post_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="aspect-[3/4] rounded-lg sm:rounded-xl overflow-hidden border border-border group relative bg-[#e8e2d8] block w-[calc(33.333%-6px)] sm:w-[130px] md:w-[140px] max-w-[160px] flex-shrink-0"
-                >
-                  <img
-                    src={item.url}
-                    alt={`Instagram Post ${idx + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-
-                  {/* Yellow Price Badge (e.g. 499/-) */}
-                  {item.tag && (
-                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-[#facc15] text-[#1a1a1a] font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded shadow-xs tracking-tight">
-                      {item.tag}
-                    </div>
-                  )}
-
-                  {/* Subtle Center Video / Reel Play Icon */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/75 backdrop-blur-xs text-charcoal flex items-center justify-center shadow-xs group-hover:bg-white group-hover:scale-110 transition-all">
-                      <Play size={12} fill="currentColor" className="ml-0.5 text-charcoal" />
-                    </div>
-                  </div>
-
-                  {/* Hover Overlay with Instagram Icon */}
-                  <div className="absolute inset-0 bg-charcoal/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2">
-                    <span className="text-[9px] font-bold text-white uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Instagram size={10} /> View Post
-                    </span>
-                  </div>
-                </a>
-              ))}
-            </div>
-
-            <div className="pt-2">
-              <a
-                href="https://instagram.com/tots_clothingclub"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 border border-[#b8966a] text-charcoal text-[10px] sm:text-xs uppercase font-bold tracking-widest px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-[#b8966a] hover:text-white transition-all shadow-2xs"
-              >
-                <span>FOLLOW US ON INSTAGRAM</span>
-              </a>
-            </div>
-          </section>
+        {dynamicIgPosts && dynamicIgPosts.length > 0 && (
+          <InstagramReelsGallery
+            posts={dynamicIgPosts}
+            instagramHandle={storeSettings?.instagram_handle || 'tots_clothingclub'}
+          />
         )}
 
         {/* ═══════════════════════════════════════════════════

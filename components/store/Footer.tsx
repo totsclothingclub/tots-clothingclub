@@ -270,19 +270,12 @@ export function Footer() {
 
         </div>
 
-        {/* Bottom Copyright & Payment Logos */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+        {/* Bottom Copyright & Crafted by EKODRIX */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-6 text-center text-xs text-gray-500 space-y-1.5">
           <p>© 2026 TOTS Clothing Club. All Rights Reserved.</p>
-          
-          {/* Payment Badges */}
-          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 flex-wrap">
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c] text-gold">Razorpay</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">UPI</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">VISA</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">Mastercard</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">RuPay</span>
-            <span className="px-2 py-0.5 bg-[#1e1e1e] rounded border border-[#2c2c2c]">Net Banking</span>
-          </div>
+          <p className="text-[11px] tracking-widest uppercase font-semibold text-gold/80">
+            Crafted by <span className="text-gold font-bold">EKODRIX</span>
+          </p>
         </div>
       </footer>
 
