@@ -81,35 +81,56 @@ export default function AdminInstagramPage() {
     setIsModalOpen(true)
   }
 
-  // Upload Video File to Cloudinary
+  // Upload Video File directly to Cloudinary (Bypasses Vercel 4.5MB Serverless Limit)
   const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setUploadingVideo(true)
     try {
+      // 1. Get signed credentials from serverless sign endpoint (< 1KB payload)
+      const signRes = await fetch('/api/cloudinary/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'instagram_videos' })
+      })
+
+      if (!signRes.ok) {
+        const signData = await signRes.json().catch(() => ({}))
+        throw new Error(signData.error || 'Failed to get Cloudinary upload authorization')
+      }
+
+      const { signature, timestamp, apiKey, cloudName, folder } = await signRes.json()
+
+      // 2. Upload DIRECTLY to Cloudinary's Video API (supports up to 100MB+)
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('folder', 'instagram_videos')
+      formData.append('api_key', apiKey)
+      formData.append('timestamp', timestamp.toString())
+      formData.append('signature', signature)
+      formData.append('folder', folder)
 
-      const res = await fetch('/api/upload', {
+      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
         method: 'POST',
         body: formData
       })
-      const data = await res.json()
 
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Video upload failed')
+      const data = await cloudRes.json()
+
+      if (!cloudRes.ok || !data.secure_url) {
+        throw new Error(data.error?.message || 'Video upload to Cloudinary failed')
       }
 
+      const videoUrl = data.secure_url
       setEditingPost(prev => ({
         ...prev,
-        video_url: data.url,
+        video_url: videoUrl,
         // If no thumbnail yet, try to derive one or use default
-        image_url: prev.image_url || data.url.replace(/\.[^/.]+$/, '.jpg')
+        image_url: prev.image_url || videoUrl.replace(/\.[^/.]+$/, '.jpg')
       }))
       toast.success('Video uploaded successfully!', 'Video Ready')
     } catch (err: any) {
+      console.error('Video upload error:', err)
       toast.error(err.message || 'Failed to upload video.', 'Upload Error')
     } finally {
       setUploadingVideo(false)
@@ -117,30 +138,48 @@ export default function AdminInstagramPage() {
     }
   }
 
-  // Upload Thumbnail Image to Cloudinary
+  // Upload Thumbnail Image directly to Cloudinary
   const handleThumbFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setUploadingThumb(true)
     try {
+      const signRes = await fetch('/api/cloudinary/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'instagram_thumbs' })
+      })
+
+      if (!signRes.ok) {
+        const signData = await signRes.json().catch(() => ({}))
+        throw new Error(signData.error || 'Failed to get Cloudinary upload authorization')
+      }
+
+      const { signature, timestamp, apiKey, cloudName, folder } = await signRes.json()
+
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('folder', 'instagram_thumbs')
+      formData.append('api_key', apiKey)
+      formData.append('timestamp', timestamp.toString())
+      formData.append('signature', signature)
+      formData.append('folder', folder)
 
-      const res = await fetch('/api/upload', {
+      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData
       })
-      const data = await res.json()
 
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Thumbnail upload failed')
+      const data = await cloudRes.json()
+
+      if (!cloudRes.ok || !data.secure_url) {
+        throw new Error(data.error?.message || 'Thumbnail upload to Cloudinary failed')
       }
 
-      setEditingPost(prev => ({ ...prev, image_url: data.url }))
+      setEditingPost(prev => ({ ...prev, image_url: data.secure_url }))
       toast.success('Thumbnail uploaded successfully!', 'Image Ready')
     } catch (err: any) {
+      console.error('Thumbnail upload error:', err)
       toast.error(err.message || 'Failed to upload image.', 'Upload Error')
     } finally {
       setUploadingThumb(false)
