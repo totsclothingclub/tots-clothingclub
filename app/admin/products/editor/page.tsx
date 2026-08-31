@@ -67,6 +67,7 @@ function ProductEditorContent() {
     regular_price: 799,
     sale_price: 599,
     discount_percent: 25,
+    stock_quantity: 25,
     status: 'published',
     is_featured: true,
     is_new_arrival: true,
@@ -332,6 +333,8 @@ function ProductEditorContent() {
         display_order: i + 1
       }))
 
+      const currentStock = typeof formData.stock_quantity === 'number' ? Number(formData.stock_quantity) : 25
+
       const variantsPayload: ProductVariant[] = colorVariants
         .filter(c => c.color.trim())
         .map((c, i) => ({
@@ -342,12 +345,13 @@ function ProductEditorContent() {
           size: 'Standard',
           sku: `${formData.sku || 'SKU'}-${c.color.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
           price: Number(formData.sale_price || formData.regular_price || 799),
-          stock_quantity: 20,
+          stock_quantity: currentStock,
           image_url: c.image_url || ''
         }))
 
       const payload = {
         ...formData,
+        stock_quantity: currentStock,
         category_id: selectedCategoryIds[0] || formData.category_id || null,
         category_ids: selectedCategoryIds,
         status,
@@ -745,11 +749,15 @@ function ProductEditorContent() {
 
       {/* ── Tab 2: Pricing & Inventory ── */}
       {activeTab === 'pricing' && (
-        <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-5">
-          <h3 className="font-serif text-lg font-semibold text-charcoal border-b border-border pb-2">
-            Pricing & Inventory
-          </h3>
+        <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-6">
+          <div>
+            <h3 className="font-serif text-lg font-semibold text-charcoal border-b border-border pb-2">
+              Pricing & Inventory Management
+            </h3>
+            <p className="text-xs text-mid mt-1">Set product MRP, promotional discount pricing, and live inventory stock availability.</p>
+          </div>
 
+          {/* Pricing Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div>
               <label className="font-semibold block mb-1 text-charcoal">
@@ -784,11 +792,73 @@ function ProductEditorContent() {
             </div>
           </div>
 
-          <div className="p-4 bg-[#faf7f2] rounded-lg border border-border space-y-2 text-xs">
-            <span className="font-semibold text-charcoal block">Tax & Invoicing</span>
-            <p className="text-mid text-[11px]">
-              Prices are inclusive of standard 12% GST apparel tax.
-            </p>
+          {/* Inventory Stock Section */}
+          <div className="p-5 bg-[#faf7f2] rounded-xl border border-[#e8dfd2] space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <span className="font-serif text-sm font-bold text-charcoal block">
+                  Inventory Stock Quantity (Units in Stock)
+                </span>
+                <p className="text-[11px] text-mid mt-0.5">
+                  How many units of this product are currently available in your warehouse.
+                </p>
+              </div>
+
+              {/* Dynamic Live Status Badge */}
+              {(() => {
+                const stock = Number(formData.stock_quantity ?? 0)
+                if (stock <= 0) {
+                  return (
+                    <span className="px-3 py-1 bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold rounded-full flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                      Out of Stock (0 units)
+                    </span>
+                  )
+                }
+                if (stock <= 5) {
+                  return (
+                    <span className="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold rounded-full flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+                      Low Stock Alert ({stock} units left)
+                    </span>
+                  )
+                }
+                return (
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-full flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                    In Stock ({stock} units available)
+                  </span>
+                )
+              })()}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="font-semibold block mb-1 text-charcoal">
+                  Available Quantity / Total Units <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  name="stock_quantity"
+                  value={formData.stock_quantity ?? 25}
+                  onChange={e => setFormData(prev => ({ ...prev, stock_quantity: Math.max(0, parseInt(e.target.value) || 0) }))}
+                  placeholder="e.g. 25"
+                  className="w-full text-sm font-bold p-3 rounded-lg border border-border bg-white focus:outline-none focus:border-gold"
+                />
+              </div>
+
+              <div className="bg-white p-3.5 rounded-lg border border-border flex flex-col justify-center space-y-1 text-[11px] text-mid">
+                <span className="font-bold text-charcoal">Storefront Behavior:</span>
+                <p>• <strong>5 or fewer:</strong> Shows an urgent &ldquo;Only X left in stock - order soon!&rdquo; banner.</p>
+                <p>• <strong>0:</strong> Automatically shows &ldquo;Out of Stock&rdquo; and disables Add to Cart.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-beige/50 rounded-lg border border-border text-xs text-mid flex items-center justify-between">
+            <span>Prices are inclusive of standard 12% GST apparel tax.</span>
+            <span className="font-semibold text-charcoal">SKU: {formData.sku}</span>
           </div>
         </div>
       )}

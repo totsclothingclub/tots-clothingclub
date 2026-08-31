@@ -17,43 +17,82 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const postData = await req.json()
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+    // Must have at least a video URL or image thumbnail
+    if (!postData.video_url && !postData.image_url) {
+      return NextResponse.json({ error: 'Please upload a video file or cover thumbnail image.' }, { status: 400 })
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     let result: any = null
 
-    if (url && key && !url.includes('placeholder')) {
+    const payload: any = {
+      image_url: postData.image_url || '/images/placeholder.jpg',
+      video_url: postData.video_url || null,
+      caption: postData.caption || '',
+      tag: postData.tag || null,
+      author_name: postData.author_name || 'tots_clothingclub',
+      post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+      display_order: Number(postData.display_order) || 1,
+      is_active: postData.is_active ?? true
+    }
+
+    if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
       const supabase = createAdminClient()
-      const payload = {
-        image_url: postData.image_url || '/images/placeholder.jpg',
-        tag: postData.tag || null,
-        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
-        display_order: Number(postData.display_order) || 1,
-        is_active: postData.is_active ?? true
-      }
 
       if (postData.id && !postData.id.startsWith('ig-')) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('instagram_posts')
           .update(payload)
           .eq('id', postData.id)
           .select()
           .single()
+
+        if (error && (error.message?.includes('video_url') || error.message?.includes('caption'))) {
+          // Retry without new columns if DB migration is pending
+          const { video_url, caption, ...basicPayload } = payload
+          const retry = await supabase
+            .from('instagram_posts')
+            .update(basicPayload)
+            .eq('id', postData.id)
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) result = data
         else if (error) console.error('Supabase update instagram post error:', error)
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('instagram_posts')
           .insert([payload])
           .select()
           .single()
+
+        if (error && (error.message?.includes('video_url') || error.message?.includes('caption'))) {
+          // Retry without new columns if DB migration is pending
+          const { video_url, caption, ...basicPayload } = payload
+          const retry = await supabase
+            .from('instagram_posts')
+            .insert([basicPayload])
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) result = data
         else if (error) console.error('Supabase insert instagram post error:', error)
       }
     }
 
     if (!result) {
-      result = await saveInstagramPost(postData)
+      result = await saveInstagramPost({
+        ...payload,
+        id: postData.id
+      })
     }
 
     try {
@@ -64,6 +103,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error: any) {
+    console.error('Save Instagram Video error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
@@ -74,10 +114,10 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'Post ID is required' }, { status: 400 })
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (url && key && !url.includes('placeholder')) {
+    if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
       const supabase = createAdminClient()
       await supabase.from('instagram_posts').delete().eq('id', id)
     }

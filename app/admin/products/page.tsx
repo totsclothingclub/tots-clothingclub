@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getAllAdminProducts, deleteProduct, getCategories } from '@/lib/supabase/data-service'
-import { Product, Category } from '@/lib/types'
+import { Product, Category, getProductStock } from '@/lib/types'
 import {
   PlusCircle,
   Edit,
@@ -15,7 +15,8 @@ import {
   SlidersHorizontal,
   CheckCircle2,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Package
 } from 'lucide-react'
 
 import { useConfirm } from '@/components/ui/ConfirmationModal'
@@ -31,6 +32,7 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
+  const [selectedStock, setSelectedStock] = useState('all')
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
@@ -85,17 +87,23 @@ export default function AdminProductsPage() {
   }
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Name', 'SKU', 'Category', 'Regular Price', 'Sale Price', 'Status', 'Sizes']
-    const rows = products.map(p => [
-      p.id,
-      `"${p.name.replace(/"/g, '""')}"`,
-      p.sku,
-      p.category?.name || 'Uncategorized',
-      p.regular_price,
-      p.sale_price || p.regular_price,
-      p.status,
-      `"${(p.available_sizes || []).join(', ')}"`
-    ])
+    const headers = ['ID', 'Name', 'SKU', 'Category', 'Regular Price', 'Sale Price', 'Stock Quantity', 'Stock Status', 'Status', 'Sizes']
+    const rows = products.map(p => {
+      const stock = getProductStock(p)
+      const stockStatus = stock <= 0 ? 'Out of Stock' : stock <= 5 ? 'Low Stock' : 'In Stock'
+      return [
+        p.id,
+        `"${p.name.replace(/"/g, '""')}"`,
+        p.sku,
+        p.category?.name || 'Uncategorized',
+        p.regular_price,
+        p.sale_price || p.regular_price,
+        stock,
+        stockStatus,
+        p.status,
+        `"${(p.available_sizes || []).join(', ')}"`
+      ]
+    })
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement('a')
@@ -113,7 +121,14 @@ export default function AdminProductsPage() {
       p.category?.slug === selectedCategory ||
       (p as any).category_ids?.includes(selectedCategory)
     const matchStatus = selectedStatus === 'all' || p.status === selectedStatus
-    return matchSearch && matchCategory && matchStatus
+    
+    const stock = getProductStock(p)
+    const matchStock = selectedStock === 'all' ||
+      (selectedStock === 'in_stock' && stock > 5) ||
+      (selectedStock === 'low_stock' && stock > 0 && stock <= 5) ||
+      (selectedStock === 'out_of_stock' && stock <= 0)
+
+    return matchSearch && matchCategory && matchStatus && matchStock
   })
 
   return (
@@ -175,15 +190,15 @@ export default function AdminProductsPage() {
           </select>
 
           <select
-            value={selectedStatus}
-            onChange={e => setSelectedStatus(e.target.value)}
-            className="text-xs py-2 px-3 border border-border rounded-lg bg-white outline-none focus:border-gold"
-            aria-label="Filter by Status"
+            value={selectedStock}
+            onChange={e => setSelectedStock(e.target.value)}
+            className="text-xs py-2 px-3 border border-border rounded-lg bg-white outline-none focus:border-gold font-medium"
+            aria-label="Filter by Stock Level"
           >
-            <option value="all">All Statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-            <option value="archived">Archived</option>
+            <option value="all">All Inventory</option>
+            <option value="in_stock">In Stock (&gt;5)</option>
+            <option value="low_stock">Low Stock (1-5)</option>
+            <option value="out_of_stock">Out of Stock (0)</option>
           </select>
 
           <span className="text-xs text-mid pl-2">
@@ -203,6 +218,7 @@ export default function AdminProductsPage() {
                 <th className="p-4">SKU</th>
                 <th className="p-4">Category</th>
                 <th className="p-4">Price</th>
+                <th className="p-4">Stock Qty</th>
                 <th className="p-4">Sizes</th>
                 <th className="p-4">Status</th>
                 <th className="p-4">Badges</th>
@@ -212,13 +228,13 @@ export default function AdminProductsPage() {
             <tbody className="divide-y divide-border/60 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-mid">
+                  <td colSpan={10} className="p-8 text-center text-mid">
                     Loading catalog products...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center text-mid">
+                  <td colSpan={10} className="p-12 text-center text-mid">
                     <p className="font-serif text-lg text-charcoal mb-2">No products found</p>
                     <p className="text-xs text-mid">Try modifying your search query or filters.</p>
                   </td>
@@ -228,6 +244,7 @@ export default function AdminProductsPage() {
                   const regular = p.regular_price
                   const sale = p.sale_price
                   const discount = p.discount_percent || (sale ? Math.round(((regular - sale) / regular) * 100) : 0)
+                  const stock = getProductStock(p)
 
                   return (
                     <tr key={p.id} className="hover:bg-[#faf7f2] transition-colors">
@@ -291,6 +308,26 @@ export default function AdminProductsPage() {
                             </span>
                           )}
                         </div>
+                      </td>
+
+                      {/* Stock Quantity */}
+                      <td className="p-4">
+                        {stock <= 0 ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                            0 Left (Out of stock)
+                          </span>
+                        ) : stock <= 5 ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                            {stock} Left (Low Stock)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                            {stock} in stock
+                          </span>
+                        )}
                       </td>
 
                       {/* Sizes */}

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -84,8 +84,26 @@ const navGroups: NavGroup[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  // If on admin login page, do not render admin shell/sidebar
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' })
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
+    router.push('/admin/login')
+    router.refresh()
+  }
 
   // Derive active breadcrumb
   const getCurrentPageTitle = () => {
@@ -207,13 +225,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span className="text-[10px] text-gray-400">admin@tots.in</span>
               </div>
             </div>
-            <Link
-              href="/"
-              className="text-gray-400 hover:text-wine p-1.5 transition-colors"
-              title="Return to site"
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="text-gray-400 hover:text-wine p-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              title="Sign out of Admin"
+              aria-label="Sign out"
             >
               <LogOut size={16} />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
