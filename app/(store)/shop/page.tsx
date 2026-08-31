@@ -87,7 +87,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     ? (currentCategory && currentCategory.slug !== 'plus-size' && currentCategory.slug !== 'all-plus-size'
         ? `PLUS SIZE ${currentCategory.name}`
         : 'PLUS SIZE COLLECTION')
-    : (currentCategory ? currentCategory.name : (isSaleOnly ? 'SALE & CLEARANCE' : 'ALL PRODUCTS'))
+    : (currentCategory ? currentCategory.name : 'ALL PRODUCTS')
 
   const pageDescription = currentCategory?.description || (isPlusSizeSection ? 'XS to 7XL — Designed for every body' : 'XS to 7XL — Made for every body')
 

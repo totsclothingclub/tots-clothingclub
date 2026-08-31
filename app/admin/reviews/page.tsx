@@ -4,8 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { getAllReviews, updateReviewStatus, deleteReview } from '@/lib/supabase/data-service'
 import { Review } from '@/lib/types'
 import { Star, CheckCircle2, MessageSquare, Trash2, Filter } from 'lucide-react'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 export default function AdminReviewsPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'approved' | 'pending'>('all')
@@ -21,16 +25,25 @@ export default function AdminReviewsPage() {
     loadReviews()
   }, [])
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this customer review?')) {
-      await deleteReview(id)
-      setReviews(prev => prev.filter(r => r.id !== id))
-    }
+  const handleDelete = async (id: string, reviewerName?: string) => {
+    const ok = await confirm({
+      title: 'Delete Customer Review?',
+      message: 'Are you sure you want to permanently delete this review? This rating will be removed from the product score.',
+      itemName: reviewerName ? `Review by ${reviewerName}` : 'Customer Review',
+      confirmText: 'Delete Review',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    await deleteReview(id)
+    toast.success('Customer review deleted successfully.', 'Review Deleted')
+    setReviews(prev => prev.filter(r => r.id !== id))
   }
 
   const handleToggleApprove = async (id: string, currentStatus: boolean) => {
     const nextStatus = !currentStatus
     await updateReviewStatus(id, nextStatus)
+    toast.success(nextStatus ? 'Review approved for storefront!' : 'Review moved to pending moderation.', 'Status Updated')
     setReviews(prev => prev.map(r => (r.id === id ? { ...r, is_approved: nextStatus } : r)))
   }
 
@@ -126,7 +139,7 @@ export default function AdminReviewsPage() {
                   {rev.is_approved ? 'Approved ✓' : 'Approve Review'}
                 </button>
                 <button
-                  onClick={() => handleDelete(rev.id)}
+                  onClick={() => handleDelete(rev.id, rev.customer_name)}
                   className="p-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg"
                   title="Delete Review"
                 >

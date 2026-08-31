@@ -18,7 +18,14 @@ import {
   AlertCircle
 } from 'lucide-react'
 
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
+import { useRouter } from 'next/navigation'
+
 export default function AdminProductsPage() {
+  const router = useRouter()
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [search, setSearch] = useState('')
@@ -52,21 +59,29 @@ export default function AdminProductsPage() {
   }, [])
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete product "${name}"? This action cannot be undone.`)) {
-      setLoading(true)
-      try {
-        await fetch(`/api/admin/products?id=${id}`, { method: 'DELETE' })
-      } catch (err) {
-        console.error(err)
-      } finally {
-        loadData()
-      }
+    const ok = await confirm({
+      title: 'Delete Product?',
+      message: 'Are you sure you want to delete this product? All inventory stock and variant details for this item will be removed permanently.',
+      itemName: name,
+      confirmText: 'Delete Product',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setLoading(true)
+    try {
+      await fetch(`/api/admin/products?id=${id}`, { method: 'DELETE' })
+      toast.success(`Product "${name}" deleted successfully.`, 'Product Deleted')
+    } catch (err) {
+      toast.error('Failed to delete product. Please try again.', 'Error')
+      console.error(err)
+    } finally {
+      loadData()
     }
   }
 
   const handleDuplicate = async (prod: Product) => {
-    alert(`Duplicating "${prod.name}" template in editor.`)
-    window.location.href = `/admin/products/editor?duplicate=${prod.id}`
+    router.push(`/admin/products/editor?duplicate=${prod.id}`)
   }
 
   const handleExportCSV = () => {

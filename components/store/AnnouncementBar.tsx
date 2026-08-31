@@ -9,7 +9,7 @@ interface AnnouncementBarProps {
 }
 
 export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ announcements }) => {
-  const text = announcements?.[0]?.text || '🚚 Free Shipping on Orders Above ₹999 | Express India Shipping'
+  const text = announcements?.[0]?.text || '🚚 Express Pan-India Delivery | Use Code: TOTS10 for 10% Off'
   const link = announcements?.[0]?.link || '/shop'
 
   return (

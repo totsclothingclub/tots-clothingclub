@@ -91,7 +91,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Title */}
           <Link href={`/products/${product.slug}`}>
             <h3
-              className="font-serif font-semibold text-charcoal text-xs sm:text-sm leading-snug line-clamp-1 group-hover:text-wine transition-colors"
+              className="font-sans font-semibold text-charcoal text-xs sm:text-sm leading-snug line-clamp-1 group-hover:text-wine transition-colors"
             >
               {product.name}
             </h3>
@@ -111,7 +111,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Price & Size info (No divider border-t) */}
         <div className="flex flex-col pt-0.5">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-serif font-bold text-wine text-sm sm:text-base">
+            <span className="font-sans font-bold text-wine text-sm sm:text-base">
               ₹{displayPrice.toLocaleString('en-IN')}
             </span>
             {sale && (

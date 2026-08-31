@@ -72,7 +72,6 @@ export function Footer() {
               <li><Link href="/shop" className="hover:text-cream transition-colors">All Products</Link></li>
               <li><Link href="/shop?category=plus-size" className="hover:text-cream transition-colors">Plus Size Collection</Link></li>
               <li><Link href="/shop?category=salwar-sets" className="hover:text-cream transition-colors">Salwar Sets</Link></li>
-              <li><Link href="/shop?isSale=true" className="text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale & Clearance</Link></li>
             </ul>
           </div>
 
@@ -98,7 +97,6 @@ export function Footer() {
               <li><Link href="/privacy-policy" className="hover:text-cream transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms-and-conditions" className="hover:text-cream transition-colors">Terms & Conditions</Link></li>
               <li><Link href="/payment-policy" className="hover:text-cream transition-colors">Payment Policy</Link></li>
-              <li><Link href="/admin" className="text-gold hover:underline font-semibold transition-colors">Admin Panel</Link></li>
             </ul>
           </div>
 
@@ -184,7 +182,6 @@ export function Footer() {
                 <li><Link href="/shop" className="block hover:text-cream transition-colors">All Products</Link></li>
                 <li><Link href="/shop?category=plus-size" className="block hover:text-cream transition-colors">Plus Size Collection</Link></li>
                 <li><Link href="/shop?category=salwar-sets" className="block hover:text-cream transition-colors">Salwar Sets</Link></li>
-                <li><Link href="/shop?isSale=true" className="block text-rose-400 hover:text-rose-300 font-semibold transition-colors">Sale & Clearance</Link></li>
               </ul>
             )}
           </div>
@@ -235,7 +232,6 @@ export function Footer() {
                 <li><Link href="/privacy-policy" className="block hover:text-cream transition-colors">Privacy Policy</Link></li>
                 <li><Link href="/terms-and-conditions" className="block hover:text-cream transition-colors">Terms & Conditions</Link></li>
                 <li><Link href="/payment-policy" className="block hover:text-cream transition-colors">Payment Policy</Link></li>
-                <li><Link href="/admin" className="block text-gold hover:underline font-semibold transition-colors">Admin Panel</Link></li>
               </ul>
             )}
           </div>
