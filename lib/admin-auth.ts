@@ -176,9 +176,9 @@ export function verifyAdminCredentials(username?: string, password?: string): bo
     return false
   }
 
-  // Safe string matching
+  // Safe string matching (trim to avoid invisible newline/space issues)
   const isUserMatch = safeStringCompare(username.trim().toLowerCase(), validUsername.trim().toLowerCase())
-  const isPassMatch = safeStringCompare(password, validPassword)
+  const isPassMatch = safeStringCompare(password.trim(), validPassword.trim())
 
   return isUserMatch && isPassMatch
 }
