@@ -34,29 +34,46 @@ export default function CloudinaryUploader({
     setSuccessCount(0)
 
     try {
+      // 1. Get signed credentials from /api/cloudinary/sign
+      const signRes = await fetch('/api/cloudinary/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder })
+      })
+
+      if (!signRes.ok) {
+        const signData = await signRes.json().catch(() => ({}))
+        throw new Error(signData.error || 'Failed to get Cloudinary upload authorization')
+      }
+
+      const { signature, timestamp, apiKey, cloudName, folder: targetFolder } = await signRes.json()
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('folder', folder)
+        formData.append('api_key', apiKey)
+        formData.append('timestamp', timestamp.toString())
+        formData.append('signature', signature)
+        formData.append('folder', targetFolder)
 
-        const res = await fetch('/api/upload', {
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
           method: 'POST',
           body: formData
         })
 
-        const data = await res.json()
+        const data = await cloudRes.json()
 
-        if (!res.ok || !data.url) {
-          throw new Error(data.error || 'Failed to upload image to Cloudinary')
+        if (!cloudRes.ok || !data.secure_url) {
+          throw new Error(data.error?.message || 'Failed to upload file to Cloudinary')
         }
 
-        onUploadSuccess(data.url)
+        onUploadSuccess(data.secure_url)
         setSuccessCount(prev => prev + 1)
       }
     } catch (err: any) {
       console.error('Cloudinary upload error:', err)
-      setErrorMsg(err.message || 'Image upload failed. Please verify Cloudinary credentials.')
+      setErrorMsg(err.message || 'Upload failed. Please verify Cloudinary credentials.')
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
