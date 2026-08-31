@@ -8,6 +8,8 @@ import {
   ArrowUp, ArrowDown, LayoutGrid
 } from 'lucide-react'
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 const BG_OPTIONS = [
   { value: 'wine', label: 'Wine / Burgundy', preview: '#7a1e3c' },
@@ -31,17 +33,13 @@ const DEFAULT_CARD: Partial<PromoCard> = {
 }
 
 export default function AdminPromoCardsPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [cards, setCards] = useState<PromoCard[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editing, setEditing] = useState<Partial<PromoCard>>({ ...DEFAULT_CARD })
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
-
-  const showToast = (type: 'success' | 'error', msg: string) => {
-    setToast({ type, msg })
-    setTimeout(() => setToast(null), 3500)
-  }
 
   const loadCards = async () => {
     setLoading(true)
@@ -74,7 +72,7 @@ export default function AdminPromoCardsPage() {
   }
 
   const handleSave = async () => {
-    if (!editing.title?.trim()) return showToast('error', 'Title is required.')
+    if (!editing.title?.trim()) return toast.error('Card Title is required.', 'Missing Field')
     setSaving(true)
     try {
       const res = await fetch('/api/admin/promo-cards', {
@@ -86,24 +84,31 @@ export default function AdminPromoCardsPage() {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || 'Save failed')
       }
-      showToast('success', editing.id ? 'Card updated!' : 'Card created!')
+      toast.success(editing.id ? 'Card updated successfully!' : 'New promo card created!', 'Success')
       closeModal()
       loadCards()
     } catch (e: any) {
-      showToast('error', e.message)
+      toast.error(e.message, 'Save Failed')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return
+    const ok = await confirm({
+      title: 'Delete Promo Card?',
+      message: 'Are you sure you want to delete this promotional card? This action cannot be undone and will remove it from the storefront.',
+      itemName: title,
+      confirmText: 'Delete Card',
+      variant: 'danger',
+    })
+    if (!ok) return
     try {
       await fetch(`/api/admin/promo-cards?id=${id}`, { method: 'DELETE' })
-      showToast('success', 'Card deleted.')
+      toast.success('Promotional card deleted successfully.', 'Deleted')
       loadCards()
     } catch (e) {
-      showToast('error', 'Delete failed.')
+      toast.error('Could not delete card. Please try again.', 'Delete Failed')
     }
   }
 
@@ -114,6 +119,10 @@ export default function AdminPromoCardsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...card, is_active: !card.is_active })
       })
+      toast.info(
+        card.is_active ? 'Card disabled from storefront' : 'Card published live to storefront',
+        'Visibility Updated'
+      )
       loadCards()
     } catch (e) {}
   }
@@ -135,6 +144,7 @@ export default function AdminPromoCardsPage() {
         body: JSON.stringify({ ...swap, display_order: card.display_order })
       })
     ])
+    toast.success('Display order reordered', 'Updated')
     loadCards()
   }
 
@@ -151,16 +161,6 @@ export default function AdminPromoCardsPage() {
 
   return (
     <div className="space-y-6 pb-12">
-
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold animate-fadein ${
-          toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-wine text-white'
-        }`}>
-          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          {toast.msg}
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -296,7 +296,7 @@ INSERT INTO public.coupons (
     499.00,
     NULL,
     500,
-    42,
+    0,
     true
   ),
   (
@@ -307,7 +307,7 @@ INSERT INTO public.coupons (
     999.00,
     NULL,
     1000,
-    128,
+    0,
     true
   )
 ON CONFLICT (id) DO NOTHING;

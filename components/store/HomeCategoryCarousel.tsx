@@ -99,7 +99,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
       
       {/* ── Section Title ── */}
       <div className="text-center space-y-1 lg:hidden">
-        <h2 className="font-serif text-2xl font-bold tracking-wider text-charcoal uppercase">
+        <h2 className="font-heading text-2xl font-bold tracking-wider text-charcoal uppercase">
           SHOP BY CATEGORY
         </h2>
         <div className="w-12 h-0.5 bg-gold mx-auto" />
@@ -116,7 +116,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
             {/* Left section: Text content */}
             <div className="flex-1 p-4 xl:p-5 flex flex-col justify-between space-y-2">
               <div className="space-y-1">
-                <h3 className="font-serif font-bold text-charcoal text-sm xl:text-base uppercase tracking-wider group-hover:text-wine transition-colors leading-tight">
+                <h3 className="font-sans font-bold text-charcoal text-xs xl:text-sm uppercase tracking-wider group-hover:text-wine transition-colors leading-tight">
                   {cat.name}
                 </h3>
                 <p className="text-[11px] text-mid leading-relaxed line-clamp-2">
@@ -200,7 +200,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
                       onError={(e: any) => { e.target.src = '/images/placeholder.jpg' }}
                     />
                   </div>
-                  <h3 className={`font-serif font-bold text-xs xs:text-sm uppercase tracking-wider transition-colors ${
+                  <h3 className={`font-sans font-bold text-xs xs:text-sm uppercase tracking-wider transition-colors ${
                     cat.slug.includes('plus-size') ? 'text-wine' : 'text-charcoal group-hover:text-wine'
                   }`}>
                     {cat.name}

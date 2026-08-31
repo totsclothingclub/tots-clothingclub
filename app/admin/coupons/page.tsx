@@ -4,8 +4,12 @@ import React, { useEffect, useState } from 'react'
 import { getAllCoupons, saveCoupon, deleteCoupon } from '@/lib/supabase/data-service'
 import { Coupon } from '@/lib/types'
 import { Ticket, PlusCircle, Trash2, Edit, X, Percent, DollarSign } from 'lucide-react'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 export default function AdminCouponsPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState<Partial<Coupon>>({
@@ -30,20 +34,32 @@ export default function AdminCouponsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingCoupon.code) return
+    if (!editingCoupon.code?.trim()) {
+      toast.error('Coupon code is required.', 'Missing Code')
+      return
+    }
     await saveCoupon({
       ...editingCoupon,
       code: editingCoupon.code.toUpperCase().trim()
     })
+    toast.success(editingCoupon.id ? 'Coupon updated!' : 'New coupon created!', 'Success')
     setIsModalOpen(false)
     loadCoupons()
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this coupon code?')) {
-      await deleteCoupon(id)
-      loadCoupons()
-    }
+  const handleDelete = async (id: string, code?: string) => {
+    const ok = await confirm({
+      title: 'Delete Coupon Code?',
+      message: 'Are you sure you want to delete this coupon? Customers will no longer be able to apply this discount at checkout.',
+      itemName: code || 'Coupon',
+      confirmText: 'Delete Coupon',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    await deleteCoupon(id)
+    toast.success(`Coupon code ${code || ''} deleted.`, 'Coupon Deleted')
+    loadCoupons()
   }
 
   return (
@@ -141,7 +157,7 @@ export default function AdminCouponsPage() {
                     <Edit size={14} />
                   </button>
                   <button
-                    onClick={() => handleDelete(coupon.id)}
+                    onClick={() => handleDelete(coupon.id, coupon.code)}
                     className="p-1.5 text-rose-600 hover:text-rose-800 rounded"
                     title="Delete Coupon"
                   >

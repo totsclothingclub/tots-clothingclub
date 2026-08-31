@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useCart } from '@/lib/context/CartContext'
 import { useWishlist } from '@/lib/context/WishlistContext'
+import { useAuth } from '@/lib/context/AuthContext'
 import { getCategories } from '@/lib/supabase/data-service'
 import { Category } from '@/lib/types'
 import { SearchOverlay } from './SearchOverlay'
@@ -31,6 +32,7 @@ export function Header({ initialCategories }: HeaderProps) {
   const pathname = usePathname()
   const { totalItemCount, setIsDrawerOpen } = useCart()
   const { wishlistCount } = useWishlist()
+  const { user, isAuthenticated } = useAuth()
   
   const [categories, setCategories] = useState<Category[]>(initialCategories || [])
   const [scrolled, setScrolled] = useState(false)
@@ -151,17 +153,17 @@ export function Header({ initialCategories }: HeaderProps) {
     <>
       {/* ── Top Announcement Bar ── */}
       <div className="bg-[#111111] text-cream text-[11px] py-1.5 border-b border-[#222222]">
-        {/* Mobile: shipping text centered, Follow Us hidden */}
+        {/* Mobile: announcement text centered, Follow Us hidden */}
         <div className="flex sm:hidden items-center justify-center gap-2 font-medium tracking-wide px-4">
           <Truck size={13} className="text-gold flex-shrink-0" />
-          <span>Free Shipping on Orders Above ₹999</span>
+          <span>Express All-India Delivery | Premium Inclusive Wear</span>
         </div>
 
-        {/* Desktop: full-width, left = shipping, right = follow us */}
+        {/* Desktop: full-width, left = announcement, right = follow us */}
         <div className="hidden sm:flex w-full px-6 lg:px-8 xl:px-12 items-center justify-between">
           <div className="flex items-center gap-2 font-medium tracking-wide">
             <Truck size={13} className="text-gold" />
-            <span>Free Shipping on Orders Above ₹999</span>
+            <span>Express All-India Delivery | Premium Inclusive Wear</span>
           </div>
 
           <div className="flex items-center gap-3 text-gray-400">
@@ -221,20 +223,15 @@ export function Header({ initialCategories }: HeaderProps) {
                 />
               </Link>
 
-              {/* Right: Wishlist & Cart */}
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/wishlist"
-                  className="relative p-2 text-cream hover:text-gold transition-colors"
-                  aria-label="Wishlist"
+              {/* Right: Search & Cart */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="p-2 text-cream hover:text-gold transition-colors"
+                  aria-label="Search"
                 >
-                  <Heart size={20} />
-                  {wishlistCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-wine text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                      {wishlistCount}
-                    </span>
-                  )}
-                </Link>
+                  <Search size={20} />
+                </button>
 
                 <button
                   onClick={() => setIsDrawerOpen(true)}
@@ -405,14 +402,6 @@ export function Header({ initialCategories }: HeaderProps) {
                   </Link>
                 ))}
 
-                {/* 5. SALE */}
-                <Link
-                  href="/shop?isSale=true"
-                  className="text-xs uppercase tracking-[0.18em] font-bold text-rose-400 hover:text-rose-300 transition-colors"
-                >
-                  SALE
-                </Link>
-
               </nav>
 
               {/* Desktop Right Icons */}
@@ -427,22 +416,15 @@ export function Header({ initialCategories }: HeaderProps) {
 
                 <Link
                   href="/account"
-                  className="p-1 hover:text-gold transition-colors flex items-center justify-center"
+                  className="p-1 hover:text-gold transition-colors flex items-center justify-center gap-1.5"
                   aria-label="Account"
                 >
-                  <User size={18} />
-                </Link>
-
-                <Link
-                  href="/wishlist"
-                  className="relative p-1 hover:text-gold transition-colors flex items-center justify-center"
-                  aria-label="Wishlist"
-                >
-                  <Heart size={18} />
-                  {wishlistCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-wine text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-                      {wishlistCount}
-                    </span>
+                  {isAuthenticated && user?.full_name ? (
+                    <div className="w-6 h-6 rounded-full bg-gold/20 text-gold border border-gold/40 flex items-center justify-center text-[10px] font-bold">
+                      {user.full_name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <User size={18} />
                   )}
                 </Link>
 
@@ -473,7 +455,7 @@ export function Header({ initialCategories }: HeaderProps) {
             className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-fadein"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 bottom-0 w-80 bg-[#141414] text-cream shadow-2xl animate-slidein flex flex-col border-r border-[#262626]">
+          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-[#141414] text-cream shadow-2xl animate-slidein-left flex flex-col border-r border-[#262626]">
             
             {/* Drawer Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#262626]">
@@ -594,15 +576,6 @@ export function Header({ initialCategories }: HeaderProps) {
                   {cat.name}
                 </Link>
               ))}
-
-              {/* 5. SALE */}
-              <Link
-                href="/shop?isSale=true"
-                onClick={() => setMobileOpen(false)}
-                className="block py-2.5 text-sm font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300 border-b border-[#222222]"
-              >
-                SALE & CLEARANCE
-              </Link>
             </nav>
 
             {/* Drawer Footer Links */}
@@ -613,20 +586,6 @@ export function Header({ initialCategories }: HeaderProps) {
                 className="flex items-center gap-3 text-xs text-gray-300 hover:text-gold"
               >
                 <User size={16} /> My Account
-              </Link>
-              <Link
-                href="/wishlist"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 text-xs text-gray-300 hover:text-gold"
-              >
-                <Heart size={16} /> Wishlist ({wishlistCount})
-              </Link>
-              <Link
-                href="/admin"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 text-xs text-gold hover:underline pt-2 border-t border-[#222222]"
-              >
-                Admin Control Panel
               </Link>
             </div>
 

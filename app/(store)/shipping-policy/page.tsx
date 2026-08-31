@@ -135,7 +135,7 @@ export default function ShippingPolicyPage() {
                   • The shipping charge is clearly displayed at the checkout page before payment confirmation.
                 </p>
                 <p className="text-xs text-mid">
-                  • Any promotional free shipping vouchers or threshold offers (if active) will be calculated and applied automatically at checkout.
+                  • Standard shipping fees are calculated and applied automatically at checkout before payment.
                 </p>
               </div>
             </div>

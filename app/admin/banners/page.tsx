@@ -5,8 +5,12 @@ import { getAllBanners, saveBanner, deleteBanner } from '@/lib/supabase/data-ser
 import { Banner } from '@/lib/types'
 import { PlusCircle, Edit, Trash2, Image as ImageIcon, ExternalLink, X, CheckCircle2, Upload, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 export default function AdminBannersPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [banners, setBanners] = useState<Banner[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingBanner, setEditingBanner] = useState<Partial<Banner>>({
@@ -51,11 +55,12 @@ export default function AdminBannersPage() {
         } else {
           setEditingBanner(prev => ({ ...prev, mobile_image_url: data.url }))
         }
+        toast.success(`Banner ${target} image uploaded successfully.`, 'Image Uploaded')
       } else {
-        alert(data.error || 'Failed to upload image to Cloudinary')
+        toast.error(data.error || 'Failed to upload image to Cloudinary', 'Upload Failed')
       }
     } catch (err: any) {
-      alert(err.message || 'Image upload failed. Check Cloudinary settings.')
+      toast.error(err.message || 'Image upload failed. Check Cloudinary settings.', 'Upload Failed')
     } finally {
       if (target === 'desktop') setUploadingDesktop(false)
       else setUploadingMobile(false)
@@ -93,7 +98,9 @@ export default function AdminBannersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingBanner)
       })
+      toast.success(editingBanner.id ? 'Banner updated successfully!' : 'New hero banner published!', 'Success')
     } catch (err) {
+      toast.error('Failed to save banner.', 'Save Error')
       console.error(err)
     } finally {
       setIsModalOpen(false)
@@ -101,16 +108,25 @@ export default function AdminBannersPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this hero promotional banner?')) {
-      setLoading(true)
-      try {
-        await fetch(`/api/admin/banners?id=${id}`, { method: 'DELETE' })
-      } catch (err) {
-        console.error(err)
-      } finally {
-        loadBanners()
-      }
+  const handleDelete = async (id: string, title?: string) => {
+    const ok = await confirm({
+      title: 'Delete Hero Banner?',
+      message: 'Are you sure you want to delete this promotional banner? It will immediately stop appearing on the homepage hero carousel.',
+      itemName: title || 'Hero Banner',
+      confirmText: 'Delete Banner',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setLoading(true)
+    try {
+      await fetch(`/api/admin/banners?id=${id}`, { method: 'DELETE' })
+      toast.success('Hero banner deleted.', 'Banner Deleted')
+    } catch (err) {
+      toast.error('Failed to delete banner.', 'Error')
+      console.error(err)
+    } finally {
+      loadBanners()
     }
   }
 
@@ -209,7 +225,7 @@ export default function AdminBannersPage() {
                   Edit Banner
                 </button>
                 <button
-                  onClick={() => handleDelete(banner.id)}
+                  onClick={() => handleDelete(banner.id, banner.title || banner.subtitle)}
                   className="p-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg"
                   title="Delete Banner"
                 >

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
-import { validateCoupon } from '@/lib/supabase/data-service'
+import { validateCoupon, createOrder } from '@/lib/supabase/data-service'
 
 export async function POST(req: Request) {
   try {
@@ -73,10 +73,48 @@ export async function POST(req: Request) {
       },
     })
 
+    // 5. Pre-create pending order in DB for reconciliation (if customer drops connection)
+    const orderItems = items.map((i: any) => ({
+      id: `oi-${Math.random().toString(36).substring(2, 9)}`,
+      order_id: '',
+      product_id: i.product?.id || 'prod-custom',
+      variant_id: i.variant?.id || 'var-custom',
+      product_name: i.product?.name || 'Product',
+      size: i.variant?.size || 'Standard',
+      color: i.variant?.color || 'Standard',
+      price: Number(i.product?.sale_price || i.product?.regular_price || 0),
+      quantity: Number(i.quantity || 1),
+      image_url: i.product?.primary_image || '/images/placeholder.jpg',
+    }))
+
+    let pendingOrder: any = null
+    try {
+      pendingOrder = await createOrder({
+        customer_name: shippingAddress?.full_name || 'Customer',
+        customer_email: shippingAddress?.email || 'customer@example.com',
+        customer_phone: shippingAddress?.phone || '+91 85940 41490',
+        shipping_address: shippingAddress || {},
+        subtotal,
+        discount,
+        shipping_fee: shippingFee,
+        tax,
+        total,
+        order_status: 'Pending',
+        payment_status: 'Pending',
+        payment_method: 'Razorpay',
+        razorpay_order_id: razorpayOrder.id,
+        items: orderItems,
+      })
+    } catch (dbErr) {
+      console.warn('Failed to pre-create pending order record:', dbErr)
+    }
+
     return NextResponse.json({
       success: true,
       order_id: razorpayOrder.id,
       orderId: razorpayOrder.id, // compatibility alias
+      db_order_id: pendingOrder?.id,
+      order_number: pendingOrder?.order_number,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       keyId,

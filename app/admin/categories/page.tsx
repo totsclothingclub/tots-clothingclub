@@ -17,10 +17,14 @@ import {
   FolderTree
 } from 'lucide-react'
 import Link from 'next/link'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 type FilterTab = 'all' | 'navbar' | 'shop_dropdown' | 'plus_size_dropdown' | 'none'
 
 export default function AdminCategoriesPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [categories, setCategories] = useState<Category[]>([])
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -67,16 +71,24 @@ export default function AdminCategoriesPage() {
 
   // 1-Click Database Reset to Default Navigation Hierarchy
   const handleResetDefaults = async () => {
-    if (confirm('Reset and seed database categories to default navigation hierarchy?')) {
-      setResetting(true)
-      try {
-        await fetch('/api/seed')
-        await loadCategories()
-      } catch (err) {
-        console.error('Reset error:', err)
-      } finally {
-        setResetting(false)
-      }
+    const ok = await confirm({
+      title: 'Reset Navigation Categories?',
+      message: 'This will reset and seed all store categories to the standard navigation hierarchy (Shop Dropdown, Plus Size, Modest Wear, etc.). Existing custom categories may be overridden.',
+      confirmText: 'Reset to Defaults',
+      variant: 'warning',
+    })
+    if (!ok) return
+
+    setResetting(true)
+    try {
+      await fetch('/api/seed')
+      await loadCategories()
+      toast.success('Categories reset and seeded to default hierarchy.', 'Hierarchy Reset')
+    } catch (err) {
+      toast.error('Failed to reset categories.', 'Reset Failed')
+      console.error('Reset error:', err)
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -99,11 +111,12 @@ export default function AdminCategoriesPage() {
       if (data.url) {
         setUploadPreview(data.url)
         setEditingCategory(prev => ({ ...prev, image_url: data.url }))
+        toast.success('Category banner image uploaded successfully.', 'Uploaded')
       } else {
-        alert(data.error || 'Failed to upload image')
+        toast.error(data.error || 'Failed to upload image', 'Upload Failed')
       }
     } catch (err: any) {
-      alert(err.message || 'Image upload failed.')
+      toast.error(err.message || 'Image upload failed.', 'Upload Failed')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -112,7 +125,10 @@ export default function AdminCategoriesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingCategory.name?.trim()) return
+    if (!editingCategory.name?.trim()) {
+      toast.error('Category Name is required.', 'Missing Name')
+      return
+    }
     setLoading(true)
 
     const slug = editingCategory.slug?.trim() || editingCategory.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -146,7 +162,9 @@ export default function AdminCategoriesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
+      toast.success(editingCategory.id ? 'Category updated!' : 'Category created!', 'Success')
     } catch (err) {
+      toast.error('Error saving category.', 'Save Failed')
       console.error('Error saving category:', err)
     } finally {
       setIsModalOpen(false)
@@ -165,6 +183,10 @@ export default function AdminCategoriesPage() {
           is_active: !cat.is_active
         })
       })
+      toast.info(
+        cat.is_active ? `"${cat.name}" hidden from navigation` : `"${cat.name}" published to navigation`,
+        'Category Updated'
+      )
       loadCategories()
     } catch (err) {
       console.error(err)
@@ -172,15 +194,24 @@ export default function AdminCategoriesPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Delete category "${name}"?`)) {
-      setLoading(true)
-      try {
-        await fetch(`/api/admin/categories?id=${id}`, { method: 'DELETE' })
-      } catch (err) {
-        console.error(err)
-      } finally {
-        loadCategories()
-      }
+    const ok = await confirm({
+      title: 'Delete Category?',
+      message: 'Are you sure you want to delete this category? Products linked directly to this category will become unassigned.',
+      itemName: name,
+      confirmText: 'Delete Category',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setLoading(true)
+    try {
+      await fetch(`/api/admin/categories?id=${id}`, { method: 'DELETE' })
+      toast.success(`Category "${name}" deleted.`, 'Category Deleted')
+    } catch (err) {
+      toast.error('Failed to delete category.', 'Error')
+      console.error(err)
+    } finally {
+      loadCategories()
     }
   }
 
