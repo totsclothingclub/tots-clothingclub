@@ -51,6 +51,7 @@ export interface Product {
   sale_price?: number
   discount_percent?: number
   tax_percent?: number
+  stock_quantity?: number
   status: 'draft' | 'published' | 'archived'
   is_featured: boolean
   is_new_arrival: boolean
@@ -67,6 +68,17 @@ export interface Product {
   available_sizes?: string[]
   created_at?: string
   updated_at?: string
+}
+
+export function getProductStock(product?: Partial<Product> | null): number {
+  if (!product) return 0
+  if (typeof product.stock_quantity === 'number') {
+    return product.stock_quantity
+  }
+  if (product.variants && product.variants.length > 0) {
+    return product.variants.reduce((acc, v) => acc + (Number(v.stock_quantity) || 0), 0)
+  }
+  return 25 // Default standard inventory
 }
 
 export interface Banner {
@@ -213,6 +225,10 @@ export interface DashboardStats {
 export interface InstagramPost {
   id: string
   image_url: string
+  video_url?: string
+  caption?: string
+  embed_html?: string
+  author_name?: string
   tag?: string
   post_url?: string
   display_order: number

@@ -21,7 +21,7 @@ import {
   Sparkles,
   ChevronLeft
 } from 'lucide-react'
-import { Product, ProductVariant, Review } from '@/lib/types'
+import { Product, ProductVariant, Review, getProductStock } from '@/lib/types'
 import { useCart } from '@/lib/context/CartContext'
 import { useWishlist } from '@/lib/context/WishlistContext'
 import { submitReview } from '@/lib/supabase/data-service'
@@ -67,6 +67,11 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
   const [selectedColor, setSelectedColor] = useState<string>(colors[0]?.name || '')
   const [quantity, setQuantity] = useState(1)
 
+  // Real inventory stock computation
+  const stock = getProductStock(product)
+  const isOutOfStock = stock <= 0
+  const isLowStock = stock > 0 && stock <= 5
+
   // Accordion states
   const [openAccordion, setOpenAccordion] = useState<string | null>('desc')
 
@@ -92,14 +97,16 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
     color: selectedColor,
     sku: `${product.sku}-${selectedSize}`,
     price: sale,
-    stock_quantity: 3
+    stock_quantity: stock
   }
 
   const handleAddToCart = () => {
+    if (isOutOfStock) return
     addItem(product, activeVariant, quantity)
   }
 
   const handleBuyNow = () => {
+    if (isOutOfStock) return
     addItem(product, activeVariant, quantity)
     router.push('/checkout')
   }
@@ -121,7 +128,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto pb-24">
+    <div className="space-y-4 lg:space-y-6 max-w-6xl mx-auto pb-12 lg:pb-16">
       
       {/* ── Mobile Top Back Bar (Screen 3 Reference) ── */}
       <div className="flex lg:hidden items-center justify-between py-2 border-b border-border">
@@ -146,52 +153,52 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
       </div>
 
       {/* ── Main Two Column Product Section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
         
         {/* ── Left Column: Imagery & Thumbnails ── */}
-        <div className="lg:col-span-6 space-y-3">
+        <div className="lg:col-span-6 space-y-3 w-full max-w-md mx-auto lg:max-w-none lg:sticky lg:top-24 self-start flex flex-col items-center">
           
-          {/* Main Large Image Container */}
-          <div className="relative aspect-[3/4] bg-[#f5efe6] rounded-3xl overflow-hidden shadow-lg border border-border">
+          {/* Main Large Image Container — Scaled down on mobile with full image visible */}
+          <div className="relative w-full max-w-[280px] xs:max-w-[310px] sm:max-w-[360px] lg:max-w-[500px] xl:max-w-[540px] aspect-[3/4] max-h-[360px] xs:max-h-[400px] sm:max-h-[460px] lg:max-h-[540px] xl:max-h-[580px] bg-[#f5efe6] rounded-3xl overflow-hidden shadow-lg border border-border flex items-center justify-center mx-auto">
             <img
               src={images[activeImageIndex]?.image_url || product.primary_image}
               alt={product.name}
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-contain object-center transition-all duration-300"
             />
 
             {/* Badges in Top Left */}
-            <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-col gap-1.5 z-10">
               <span className="bg-amber-400 text-charcoal text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded shadow-xs">
                 NEW
               </span>
             </div>
 
             {/* Image Counter Badge (1/6 in Bottom Right) */}
-            <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-md">
+            <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-md z-10">
               {activeImageIndex + 1}/{images.length}
             </div>
 
             {/* Wishlist button on desktop */}
             <button
               onClick={() => toggleWishlist(product)}
-              className="hidden lg:flex absolute top-4 right-4 p-2.5 rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-charcoal hover:text-wine shadow-md transition-all"
+              className="hidden lg:flex absolute top-4 right-4 p-2.5 rounded-full bg-white/80 backdrop-blur-xs hover:bg-white text-charcoal hover:text-wine shadow-md transition-all z-10"
               aria-label="Wishlist"
             >
               <Heart size={18} fill={isWishlisted ? '#7b1f35' : 'none'} className={isWishlisted ? 'text-wine' : ''} />
             </button>
           </div>
 
-          {/* Thumbnail Strip (Exact Reference) */}
-          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+          {/* Thumbnail Strip — Centered under main image, dynamic scroll when multiple */}
+          <div className="flex items-center justify-center gap-2.5 overflow-x-auto no-scrollbar p-1.5 w-full max-w-[280px] xs:max-w-[310px] sm:max-w-[360px] lg:max-w-[500px] xl:max-w-[540px] mx-auto">
             {images.map((img, idx) => (
               <button
                 key={img.id || idx}
                 onClick={() => setActiveImageIndex(idx)}
-                className={`relative w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
-                  activeImageIndex === idx ? 'border-gold shadow-md scale-105' : 'border-border opacity-70 hover:opacity-100'
+                className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
+                  activeImageIndex === idx ? 'border-gold shadow-md ring-2 ring-gold/40' : 'border-border opacity-70 hover:opacity-100'
                 }`}
               >
-                <img src={img.image_url} alt="" className="w-full h-full object-cover object-top" />
+                <img src={img.image_url} alt="" className="w-full h-full object-contain object-center bg-[#f5efe6]" />
               </button>
             ))}
           </div>
@@ -311,10 +318,29 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
               })}
             </div>
 
-            {/* Stock Warning (Only 3 left in stock) */}
-            <p className="text-xs text-emerald-700 font-semibold pt-1">
-              Only 3 left in stock
-            </p>
+            {/* Stock Level Warning / Indicator */}
+            {isOutOfStock ? (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
+                <span className="text-xs text-rose-600 font-bold">
+                  Out of Stock
+                </span>
+              </div>
+            ) : isLowStock ? (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse" />
+                <span className="text-xs text-amber-800 font-bold">
+                  Only {stock} {stock === 1 ? 'item' : 'items'} left in stock - order soon!
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                <span className="text-xs text-emerald-700 font-semibold">
+                  In Stock ({stock} items available)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── Product Highlights (Exact Reference) ── */}
@@ -355,42 +381,59 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-4">
               <span className="text-xs font-semibold text-charcoal">Quantity</span>
-              <div className="flex items-center border border-border bg-white rounded-lg">
+              <div className={`flex items-center border border-border bg-white rounded-lg ${isOutOfStock ? 'opacity-40 pointer-events-none' : ''}`}>
                 <button
                   type="button"
+                  disabled={quantity <= 1 || isOutOfStock}
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3 py-1.5 text-mid hover:text-charcoal font-bold"
+                  className="px-3 py-1.5 text-mid hover:text-charcoal font-bold disabled:opacity-40"
                 >
                   -
                 </button>
                 <span className="px-3 py-1.5 text-xs font-bold text-charcoal">{quantity}</span>
                 <button
                   type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-3 py-1.5 text-mid hover:text-charcoal font-bold"
+                  disabled={quantity >= stock || isOutOfStock}
+                  onClick={() => setQuantity(Math.min(stock, quantity + 1))}
+                  className="px-3 py-1.5 text-mid hover:text-charcoal font-bold disabled:opacity-40"
                 >
                   +
                 </button>
               </div>
+              {stock > 0 && quantity >= stock && (
+                <span className="text-[10px] text-amber-800 font-semibold">Max quantity available</span>
+              )}
             </div>
 
             {/* CTAs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                className="w-full py-4 bg-wine text-white text-xs uppercase font-bold tracking-widest rounded-xl hover:bg-wine-dark transition-all shadow-md text-center"
-              >
-                BUY NOW
-              </button>
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="w-full py-4 bg-transparent border-2 border-charcoal text-charcoal text-xs uppercase font-bold tracking-widest rounded-xl hover:bg-charcoal hover:text-white transition-all text-center flex items-center justify-center gap-2"
-              >
-                <ShoppingBag size={16} />
-                <span>ADD TO CART</span>
-              </button>
+              {isOutOfStock ? (
+                <button
+                  type="button"
+                  disabled
+                  className="col-span-full w-full py-4 bg-gray-200 text-gray-500 text-xs uppercase font-bold tracking-widest rounded-xl cursor-not-allowed text-center shadow-xs"
+                >
+                  OUT OF STOCK
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleBuyNow}
+                    className="w-full py-4 bg-wine text-white text-xs uppercase font-bold tracking-widest rounded-xl hover:bg-wine-dark transition-all shadow-md text-center"
+                  >
+                    BUY NOW
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    className="w-full py-4 bg-transparent border-2 border-charcoal text-charcoal text-xs uppercase font-bold tracking-widest rounded-xl hover:bg-charcoal hover:text-white transition-all text-center flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag size={16} />
+                    <span>ADD TO CART</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

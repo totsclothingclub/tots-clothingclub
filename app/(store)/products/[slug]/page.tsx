@@ -27,7 +27,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     <div className="min-h-screen flex flex-col bg-tots-cream">
       <Header />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-12 py-6 lg:py-12 pb-24">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-12 pt-2 sm:pt-3 lg:pt-4 pb-16">
         <ProductDetailClient product={product} initialReviews={reviews} />
       </main>
 

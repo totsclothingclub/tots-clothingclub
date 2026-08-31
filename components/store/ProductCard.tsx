@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { Heart, Star } from 'lucide-react'
-import { Product } from '@/lib/types'
+import { Product, getProductStock } from '@/lib/types'
 import { useWishlist } from '@/lib/context/WishlistContext'
 
 interface ProductCardProps {
@@ -14,6 +14,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isInWishlist, toggleWishlist } = useWishlist()
   const isWishlisted = isInWishlist(product.id)
   const [hovered, setHovered] = useState(false)
+  const stock = getProductStock(product)
+  const isOutOfStock = stock <= 0
+  const isLowStock = stock > 0 && stock <= 3
 
   const hasSecondary = product.images && product.images.length > 1
   // Resolve the best available image: primary_image → first product_image → placeholder
@@ -44,24 +47,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <img
             src={img || '/images/placeholder.jpg'}
             alt={product.name}
-            className="product-img w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+            className={`product-img w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale opacity-75' : ''}`}
             loading="lazy"
           />
         </Link>
 
         {/* Badges in Top Left */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-          {product.is_new_arrival && (
+          {isOutOfStock && (
+            <span className="bg-charcoal text-cream text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded shadow-2xs">
+              OUT OF STOCK
+            </span>
+          )}
+          {!isOutOfStock && isLowStock && (
+            <span className="bg-rose-600 text-white text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded shadow-2xs">
+              ONLY {stock} LEFT
+            </span>
+          )}
+          {!isOutOfStock && product.is_new_arrival && (
             <span className="bg-amber-400 text-charcoal text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded shadow-2xs">
               NEW
             </span>
           )}
-          {product.is_best_seller && (
+          {!isOutOfStock && product.is_best_seller && (
             <span className="bg-amber-500 text-white text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded shadow-2xs">
               BEST SELLER
             </span>
           )}
-          {product.is_sale && discount > 0 && (
+          {!isOutOfStock && product.is_sale && discount > 0 && (
             <span className="bg-wine text-white text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded shadow-2xs">
               SALE
             </span>

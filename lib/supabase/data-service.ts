@@ -257,7 +257,17 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
-      const payload = {
+      const fullPayload: any = {
+        image_url: postData.image_url || '/images/placeholder.jpg',
+        video_url: postData.video_url || null,
+        caption: postData.caption || '',
+        tag: postData.tag || null,
+        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+        display_order: Number(postData.display_order) || 1,
+        is_active: postData.is_active ?? true
+      }
+
+      const basicPayload: any = {
         image_url: postData.image_url || '/images/placeholder.jpg',
         tag: postData.tag || null,
         post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
@@ -266,22 +276,45 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
       }
 
       if (postData.id && !postData.id.startsWith('ig-')) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('instagram_posts')
-          .update(payload)
+          .update(fullPayload)
           .eq('id', postData.id)
           .select()
           .single()
+
+        if (error && (error.message?.includes('video_url') || error.message?.includes('caption') || error.code === '42703')) {
+          const retry = await supabase
+            .from('instagram_posts')
+            .update(basicPayload)
+            .eq('id', postData.id)
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) {
           instagramPosts = instagramPosts.map(p => (p.id === data.id ? (data as InstagramPost) : p))
           return data as InstagramPost
         }
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('instagram_posts')
-          .insert([payload])
+          .insert([fullPayload])
           .select()
           .single()
+
+        if (error && (error.message?.includes('video_url') || error.message?.includes('caption') || error.code === '42703')) {
+          const retry = await supabase
+            .from('instagram_posts')
+            .insert([basicPayload])
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) {
           instagramPosts.push(data as InstagramPost)
           return data as InstagramPost
@@ -300,6 +333,8 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
     const newPost: InstagramPost = {
       id: `ig-${Date.now()}`,
       image_url: postData.image_url || '/images/placeholder.jpg',
+      video_url: postData.video_url,
+      caption: postData.caption || '',
       tag: postData.tag,
       post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
       display_order: Number(postData.display_order) || instagramPosts.length + 1,
@@ -820,6 +855,8 @@ export async function saveProduct(productData: Partial<Product>): Promise<Produc
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
+      const stockQty = typeof productData.stock_quantity === 'number' ? Number(productData.stock_quantity) : 25
+
       const productPayload: any = {
         name: productData.name || 'New Product',
         slug: slug,
@@ -832,6 +869,7 @@ export async function saveProduct(productData: Partial<Product>): Promise<Produc
         sale_price: productData.sale_price ? Number(productData.sale_price) : null,
         discount_percent: productData.discount_percent || 0,
         tax_percent: productData.tax_percent || 5.0,
+        stock_quantity: stockQty,
         status: productData.status || 'published',
         is_featured: productData.is_featured ?? false,
         is_new_arrival: productData.is_new_arrival ?? true,
@@ -845,19 +883,44 @@ export async function saveProduct(productData: Partial<Product>): Promise<Produc
       let savedProduct: any = null
 
       if (productData.id && !productData.id.startsWith('prod-')) {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('products')
           .update(productPayload)
           .eq('id', productData.id)
           .select()
           .single()
+
+        if (error && (error.message?.includes('stock_quantity') || error.code === '42703')) {
+          const { stock_quantity, ...fallbackPayload } = productPayload
+          const retry = await supabase
+            .from('products')
+            .update(fallbackPayload)
+            .eq('id', productData.id)
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) savedProduct = data
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('products')
           .insert([productPayload])
           .select()
           .single()
+
+        if (error && (error.message?.includes('stock_quantity') || error.code === '42703')) {
+          const { stock_quantity, ...fallbackPayload } = productPayload
+          const retry = await supabase
+            .from('products')
+            .insert([fallbackPayload])
+            .select()
+            .single()
+          data = retry.data
+          error = retry.error
+        }
+
         if (!error && data) savedProduct = data
       }
 
