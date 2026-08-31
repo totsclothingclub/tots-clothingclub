@@ -17,8 +17,12 @@ import {
   Play
 } from 'lucide-react'
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
+import { useConfirm } from '@/components/ui/ConfirmationModal'
+import { useToast } from '@/components/ui/Toast'
 
 export default function AdminInstagramPage() {
+  const { confirm } = useConfirm()
+  const { toast } = useToast()
   const [posts, setPosts] = useState<InstagramPost[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -69,7 +73,7 @@ export default function AdminInstagramPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingPost.image_url) {
-      alert('Please upload or enter an image URL.')
+      toast.error('Please upload or enter an image URL.', 'Image Required')
       return
     }
 
@@ -80,7 +84,9 @@ export default function AdminInstagramPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingPost)
       })
+      toast.success(editingPost.id ? 'Instagram post updated!' : 'New Instagram post added!', 'Success')
     } catch (err) {
+      toast.error('Failed to save Instagram post.', 'Error')
       console.error(err)
     } finally {
       setIsModalOpen(false)
@@ -88,16 +94,25 @@ export default function AdminInstagramPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this Instagram post?')) {
-      setLoading(true)
-      try {
-        await fetch(`/api/admin/instagram?id=${id}`, { method: 'DELETE' })
-      } catch (err) {
-        console.error(err)
-      } finally {
-        loadPosts()
-      }
+  const handleDelete = async (id: string, tag?: string) => {
+    const ok = await confirm({
+      title: 'Delete Instagram Post?',
+      message: 'Are you sure you want to remove this post from the "Seen On Instagram" storefront gallery?',
+      itemName: tag || 'Instagram Post',
+      confirmText: 'Delete Post',
+      variant: 'danger',
+    })
+    if (!ok) return
+
+    setLoading(true)
+    try {
+      await fetch(`/api/admin/instagram?id=${id}`, { method: 'DELETE' })
+      toast.success('Instagram post removed from gallery.', 'Post Deleted')
+    } catch (err) {
+      toast.error('Failed to delete post.', 'Error')
+      console.error(err)
+    } finally {
+      loadPosts()
     }
   }
 
@@ -215,7 +230,7 @@ export default function AdminInstagramPage() {
                     <Pencil size={12} /> Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(post.id)}
+                    onClick={() => handleDelete(post.id, post.tag || 'Instagram Post')}
                     className="text-xs text-rose-600 font-semibold hover:text-rose-800 flex items-center gap-1"
                   >
                     <Trash2 size={12} /> Delete

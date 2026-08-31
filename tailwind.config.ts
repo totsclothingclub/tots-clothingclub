@@ -32,8 +32,12 @@ const config: Config = {
         'tots-wine-hover':  '#621929',
       },
       fontFamily: {
-        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
-        sans:  ['Plus Jakarta Sans', 'sans-serif'],
+        sans:    ['var(--font-lato)', 'Lato', 'sans-serif'],
+        body:    ['var(--font-lato)', 'Lato', 'sans-serif'],
+        lato:    ['var(--font-lato)', 'Lato', 'sans-serif'],
+        heading: ['var(--font-oswald)', 'Oswald', 'sans-serif'],
+        oswald:  ['var(--font-oswald)', 'Oswald', 'sans-serif'],
+        serif:   ['var(--font-oswald)', 'Oswald', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.65rem', { lineHeight: '1rem' }],

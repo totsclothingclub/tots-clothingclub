@@ -25,11 +25,13 @@ import {
   X
 } from 'lucide-react'
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
+import { useToast } from '@/components/ui/Toast'
 
 const allSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
 
 function ProductEditorContent() {
   const router = useRouter()
+  const { toast } = useToast()
   const searchParams = useSearchParams()
   const productId = searchParams.get('id')
   const duplicateId = searchParams.get('duplicate')
@@ -281,11 +283,12 @@ function ProductEditorContent() {
         const next = [...colorVariants]
         next[idx].image_url = data.url
         setColorVariants(next)
+        toast.success('Variant image uploaded', 'Image Uploaded')
       } else {
-        alert(data.error || 'Upload failed')
+        toast.error(data.error || 'Upload failed', 'Upload Error')
       }
     } catch (e: any) {
-      alert(e.message || 'Image upload failed')
+      toast.error(e.message || 'Image upload failed', 'Upload Error')
     } finally {
       setUploadingColorIdx(null)
     }
@@ -316,8 +319,8 @@ function ProductEditorContent() {
   }
 
   const handleSave = async (status: 'published' | 'draft' = 'published') => {
-    if (!formData.name) return alert('Product Title is required.')
-    if (!formData.regular_price) return alert('Regular Price is required.')
+    if (!formData.name?.trim()) return toast.error('Product Title is required.', 'Missing Title')
+    if (!formData.regular_price) return toast.error('Regular Price is required.', 'Missing Price')
 
     setSaving(true)
     try {
@@ -364,9 +367,13 @@ function ProductEditorContent() {
         throw new Error(errData.error || `Server responded with status ${res.status}`)
       }
 
+      toast.success(
+        status === 'published' ? 'Product published to store!' : 'Product saved as draft.',
+        'Product Saved'
+      )
       router.push('/admin/products')
     } catch (err: any) {
-      alert(`Error saving product: ${err.message}`)
+      toast.error(`Error saving product: ${err.message}`, 'Save Failed')
     } finally {
       setSaving(false)
     }

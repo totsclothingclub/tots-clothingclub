@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { Product } from '../types'
+import { useAuth } from './AuthContext'
 
 interface WishlistContextType {
   wishlistProductIds: string[]
@@ -13,32 +14,46 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated, openAuthModal } = useAuth()
   const [wishlistProductIds, setWishlistProductIds] = useState<string[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
+  // Load wishlist for current user
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('tots_wishlist')
-      if (saved) {
-        setWishlistProductIds(JSON.parse(saved))
+    if (isAuthenticated && user?.id) {
+      try {
+        const saved = localStorage.getItem(`tots_wishlist_${user.id}`)
+        if (saved) {
+          setWishlistProductIds(JSON.parse(saved))
+        } else {
+          setWishlistProductIds([])
+        }
+      } catch (e) {
+        console.warn('Failed to load wishlist from localStorage', e)
       }
-    } catch (e) {
-      console.warn('Failed to load wishlist from localStorage', e)
+    } else {
+      setWishlistProductIds([])
     }
     setIsHydrated(true)
-  }, [])
+  }, [user?.id, isAuthenticated])
 
+  // Save wishlist per user
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && isAuthenticated && user?.id) {
       try {
-        localStorage.setItem('tots_wishlist', JSON.stringify(wishlistProductIds))
+        localStorage.setItem(`tots_wishlist_${user.id}`, JSON.stringify(wishlistProductIds))
       } catch (e) {
         console.warn('Failed to save wishlist to localStorage', e)
       }
     }
-  }, [wishlistProductIds, isHydrated])
+  }, [wishlistProductIds, isHydrated, user?.id, isAuthenticated])
 
   const toggleWishlist = (product: Product) => {
+    if (!isAuthenticated) {
+      openAuthModal('Please sign in or create an account to save dresses to your wishlist.')
+      return
+    }
+
     setWishlistProductIds(prev => {
       if (prev.includes(product.id)) {
         return prev.filter(id => id !== product.id)
@@ -49,7 +64,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }
 
   const isInWishlist = (productId: string) => {
-    return wishlistProductIds.includes(productId)
+    return isAuthenticated && wishlistProductIds.includes(productId)
   }
 
   return (

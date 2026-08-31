@@ -4,37 +4,55 @@ import React, { useState } from 'react'
 import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useCart } from '@/lib/context/CartContext'
-import { validateCoupon } from '@/lib/supabase/data-service'
+import { validateCoupon, getActiveCoupons } from '@/lib/supabase/data-service'
+import { Coupon } from '@/lib/types'
 
 export const CartDrawer: React.FC = () => {
-  const { items, removeItem, updateQuantity, subtotal, isDrawerOpen, setIsDrawerOpen } = useCart()
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    subtotal,
+    isDrawerOpen,
+    setIsDrawerOpen,
+    appliedCoupon,
+    couponCode,
+    discount,
+    couponMessage,
+    applyCoupon,
+    removeCoupon
+  } = useCart()
+
   const [couponInput, setCouponInput] = useState('')
-  const [discountMsg, setDiscountMsg] = useState('')
-  const [discountAmount, setDiscountAmount] = useState(0)
+  const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([])
+
+  const shippingFee = 80
+
+  React.useEffect(() => {
+    if (isDrawerOpen) {
+      getActiveCoupons().then(list => setActiveCoupons(list || []))
+    }
+  }, [isDrawerOpen])
+
+  React.useEffect(() => {
+    if (couponCode) {
+      setCouponInput(couponCode)
+    }
+  }, [couponCode])
 
   if (!isDrawerOpen) return null
-
-  const freeShippingThreshold = 999
-  const progressPercent = Math.min(100, (subtotal / freeShippingThreshold) * 100)
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal)
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!couponInput.trim()) return
-    const res = await validateCoupon(couponInput, subtotal)
-    setDiscountMsg(res.message)
-    if (res.valid) {
-      setDiscountAmount(res.discount)
-    } else {
-      setDiscountAmount(0)
-    }
+    await applyCoupon(couponInput)
   }
 
-  const finalTotal = Math.max(0, subtotal - discountAmount)
+  const finalTotal = Math.max(0, subtotal - discount + shippingFee)
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs animate-fade-in flex justify-end">
-      <div className="w-full sm:w-screen sm:max-w-md h-full max-h-screen bg-tots-cream shadow-2xl flex flex-col sm:border-l border-tots-gold/30 overflow-hidden max-w-full min-w-0">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs animate-fadein flex justify-end">
+      <div className="w-full sm:w-screen sm:max-w-md h-full max-h-screen bg-tots-cream shadow-2xl flex flex-col sm:border-l border-tots-gold/30 overflow-hidden max-w-full min-w-0 animate-slidein-right">
         
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-tots-border bg-tots-dark text-white flex items-center justify-between flex-shrink-0">
@@ -51,25 +69,6 @@ export const CartDrawer: React.FC = () => {
           >
             <X className="w-6 h-6" />
           </button>
-        </div>
-
-        {/* Free Shipping Progress Bar */}
-        <div className="bg-tots-beige p-3 text-xs border-b border-tots-border text-center flex-shrink-0">
-          {remainingForFreeShipping > 0 ? (
-            <p className="text-tots-dark font-medium mb-1.5 text-xs">
-              Add <span className="font-bold text-tots-wine">₹{remainingForFreeShipping}</span> more for <span className="font-bold text-tots-gold-dark">FREE Shipping</span>!
-            </p>
-          ) : (
-            <p className="text-emerald-700 font-bold mb-1.5 flex items-center justify-center gap-1 text-xs">
-              🎉 Congratulations! You unlocked FREE Shipping
-            </p>
-          )}
-          <div className="w-full bg-tots-cream-dark h-2 rounded-full overflow-hidden border border-tots-border/50">
-            <div
-              className="bg-gradient-to-r from-tots-gold to-tots-wine h-full transition-all duration-500 rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
         </div>
 
         {/* Cart Items List — only scrolls vertically when content overflows */}
@@ -147,26 +146,41 @@ export const CartDrawer: React.FC = () => {
         {/* Drawer Footer Summary */}
         {items.length > 0 && (
           <div className="p-4 sm:p-5 bg-white border-t border-tots-border shadow-lg space-y-3 flex-shrink-0 min-w-0 w-full">
-            {/* Coupon Input */}
-            <form onSubmit={handleApplyCoupon} className="flex gap-2 min-w-0 w-full">
-              <input
-                type="text"
-                value={couponInput}
-                onChange={e => setCouponInput(e.target.value)}
-                placeholder="Coupon Code (e.g. TOTS10)"
-                className="flex-1 min-w-0 text-xs px-3 py-2 border border-tots-border rounded-lg uppercase tracking-wider focus:outline-none focus:border-tots-gold bg-tots-cream placeholder:normal-case placeholder:tracking-normal"
-              />
-              <button
-                type="submit"
-                className="flex-shrink-0 bg-tots-dark text-tots-cream text-xs px-4 py-2 rounded-lg hover:bg-tots-gold hover:text-white transition-colors font-semibold uppercase tracking-wider whitespace-nowrap"
-              >
-                Apply
-              </button>
-            </form>
-            {discountMsg && (
-              <p className={`text-xs ${discountAmount > 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600'}`}>
-                {discountMsg}
-              </p>
+            {/* Coupon Input - Only displayed when valid active coupons exist */}
+            {activeCoupons.length > 0 && (
+              <div className="space-y-2">
+                <form onSubmit={handleApplyCoupon} className="flex gap-2 min-w-0 w-full">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value)}
+                    placeholder="Coupon Code"
+                    className="flex-1 min-w-0 text-xs px-3 py-2 border border-tots-border rounded-lg uppercase tracking-wider focus:outline-none focus:border-tots-gold bg-tots-cream placeholder:normal-case placeholder:tracking-normal"
+                  />
+                  <button
+                    type="submit"
+                    className="flex-shrink-0 bg-tots-dark text-tots-cream text-xs px-4 py-2 rounded-lg hover:bg-tots-gold hover:text-white transition-colors font-semibold uppercase tracking-wider whitespace-nowrap"
+                  >
+                    Apply
+                  </button>
+                </form>
+                {couponMessage && (
+                  <div className="flex items-center justify-between text-xs">
+                    <p className={discount > 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600'}>
+                      {couponMessage}
+                    </p>
+                    {appliedCoupon && (
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-[11px] text-rose-600 hover:underline font-semibold"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="space-y-1 text-xs text-tots-gray pt-1.5 border-t border-tots-border/60">
@@ -174,19 +188,19 @@ export const CartDrawer: React.FC = () => {
                 <span>Subtotal</span>
                 <span className="font-semibold text-tots-dark">₹{subtotal}</span>
               </div>
-              {discountAmount > 0 && (
+              {discount > 0 && (
                 <div className="flex justify-between text-emerald-700">
-                  <span>Discount</span>
-                  <span className="font-semibold">-₹{discountAmount}</span>
+                  <span>Discount ({appliedCoupon?.code})</span>
+                  <span className="font-semibold">-₹{discount}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>{remainingForFreeShipping === 0 ? <strong className="text-emerald-700">FREE</strong> : '₹99'}</span>
+                <span className="font-semibold text-tots-dark">₹{shippingFee}</span>
               </div>
               <div className="flex justify-between text-sm sm:text-base font-bold text-tots-dark pt-1.5 border-t border-tots-border">
                 <span>Estimated Total</span>
-                <span className="text-tots-wine font-serif text-lg sm:text-xl">₹{finalTotal + (remainingForFreeShipping === 0 ? 0 : 99)}</span>
+                <span className="text-tots-wine font-serif text-lg sm:text-xl">₹{finalTotal}</span>
               </div>
             </div>
 
@@ -201,7 +215,7 @@ export const CartDrawer: React.FC = () => {
 
             <div className="flex items-center justify-center gap-1.5 text-tots-gray text-[10px] pt-0.5 text-center flex-wrap">
               <ShieldCheck className="w-3.5 h-3.5 text-tots-gold flex-shrink-0" />
-              <span>100% Secure Checkout | 7-Day Hassle-Free Returns</span>
+              <span>100% Secure Checkout | Encrypted Payment</span>
             </div>
           </div>
         )}

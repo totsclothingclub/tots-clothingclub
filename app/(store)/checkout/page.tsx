@@ -6,8 +6,10 @@ import Header from '@/components/store/Header'
 import { Footer } from '@/components/store/Footer'
 import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { useCart } from '@/lib/context/CartContext'
-import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck, AlertCircle } from 'lucide-react'
-import { validateCoupon } from '@/lib/supabase/data-service'
+import { useAuth } from '@/lib/context/AuthContext'
+import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck, AlertCircle, MapPin, Building2, Home as HomeIcon } from 'lucide-react'
+import { validateCoupon, getActiveCoupons } from '@/lib/supabase/data-service'
+import { Coupon } from '@/lib/types'
 
 // Helper function to load Razorpay Standard Web Checkout script dynamically
 function loadRazorpayScript(): Promise<boolean> {
@@ -26,24 +28,61 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 export default function CheckoutPage() {
-  const { items, subtotal, clearCart } = useCart()
+  const {
+    items,
+    subtotal,
+    clearCart,
+    appliedCoupon,
+    couponCode,
+    discount,
+    couponMessage,
+    applyCoupon,
+    removeCoupon
+  } = useCart()
+  const { user, isAuthenticated, addresses } = useAuth()
 
   const [formData, setFormData] = useState({
-    full_name: 'Simran Kaur',
-    email: 'simran.k@example.com',
-    phone: '+91 85940 41490',
-    street: '42 Lotus Boulevard, Sector 128',
-    apartment: 'Apt 402',
-    city: 'Noida',
-    state: 'Uttar Pradesh',
-    pincode: '201304',
+    full_name: '',
+    email: '',
+    phone: '',
+    street: '',
+    apartment: '',
+    city: '',
+    state: '',
+    pincode: '',
     country: 'India'
   })
 
-  const [paymentMethod, setPaymentMethod] = useState<'Razorpay' | 'UPI'>('Razorpay')
-  const [couponCode, setCouponCode] = useState('')
-  const [discount, setDiscount] = useState(0)
-  const [couponMessage, setCouponMessage] = useState('')
+  // Pre-fill user data & default saved address
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const defaultAddr = addresses.find(a => a.is_default) || addresses[0]
+      if (defaultAddr) {
+        setFormData({
+          full_name: defaultAddr.full_name || user.full_name || '',
+          email: user.email || '',
+          phone: defaultAddr.phone || user.phone || '',
+          street: defaultAddr.street || '',
+          apartment: defaultAddr.apartment || '',
+          city: defaultAddr.city || '',
+          state: defaultAddr.state || '',
+          pincode: defaultAddr.pincode || '',
+          country: defaultAddr.country || 'India',
+        })
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          full_name: user.full_name || prev.full_name,
+          email: user.email || prev.email,
+          phone: user.phone || prev.phone,
+        }))
+      }
+    }
+  }, [isAuthenticated, user, addresses])
+
+  const paymentMethod = 'Razorpay'
+  const [inputCoupon, setInputCoupon] = useState('')
+  const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [completedOrder, setCompletedOrder] = useState<any>(null)
@@ -54,18 +93,19 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     loadRazorpayScript()
+    getActiveCoupons().then(list => setActiveCoupons(list || []))
   }, [])
+
+  useEffect(() => {
+    if (couponCode) {
+      setInputCoupon(couponCode)
+    }
+  }, [couponCode])
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!couponCode.trim()) return
-    const res = await validateCoupon(couponCode, subtotal)
-    setCouponMessage(res.message)
-    if (res.valid) {
-      setDiscount(res.discount)
-    } else {
-      setDiscount(0)
-    }
+    if (!inputCoupon.trim()) return
+    await applyCoupon(inputCoupon)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +136,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items,
-          couponCode,
+          couponCode: appliedCoupon?.code || couponCode || inputCoupon,
           shippingAddress: formData,
         }),
       })
@@ -347,9 +387,59 @@ export default function CheckoutPage() {
 
             {/* Shipping Address Box */}
             <div className="bg-white p-6 rounded-2xl border border-tots-border shadow-xs space-y-4">
-              <h2 className="font-serif text-xl font-bold text-tots-dark border-b border-tots-border pb-3">
-                2. Shipping Address
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-tots-border pb-3">
+                <h2 className="font-serif text-xl font-bold text-tots-dark">
+                  2. Shipping Address
+                </h2>
+                {isAuthenticated && (
+                  <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={13} /> Logged In as {user?.full_name?.split(' ')[0]}
+                  </span>
+                )}
+              </div>
+
+              {/* Saved Address Quick Selector */}
+              {isAuthenticated && addresses.length > 0 && (
+                <div className="space-y-1.5 p-3 rounded-xl bg-beige-light border border-border/70">
+                  <span className="text-[10px] uppercase font-bold text-mid tracking-wider block">
+                    Choose from saved addresses:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {addresses.map(addr => {
+                      const isSelected =
+                        formData.street === addr.street && formData.pincode === addr.pincode
+                      return (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              full_name: addr.full_name,
+                              phone: addr.phone,
+                              street: addr.street,
+                              apartment: addr.apartment || '',
+                              city: addr.city,
+                              state: addr.state,
+                              pincode: addr.pincode,
+                            }))
+                          }}
+                          className={`px-3 py-1.5 rounded-lg border text-left text-xs transition-all flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-wine text-white border-wine shadow-xs font-bold'
+                              : 'bg-white text-charcoal border-border hover:border-gold font-medium'
+                          }`}
+                        >
+                          <span>{addr.label === 'Office' ? '🏢' : '🏠'}</span>
+                          <span>{addr.label || 'Address'}</span>
+                          <span className="opacity-70 text-[10px]">({addr.city})</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="sm:col-span-2">
                   <label className="font-semibold text-tots-dark block mb-1">Street Address</label>
@@ -408,55 +498,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Payment Method Selector */}
-            <div className="bg-white p-6 rounded-2xl border border-tots-border shadow-xs space-y-4">
-              <div className="border-b border-tots-border pb-3 flex items-center justify-between">
-                <h2 className="font-serif text-xl font-bold text-tots-dark">
-                  3. Payment Method
-                </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Online Payment Only
-                </span>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { id: 'Razorpay', label: 'Razorpay Online (UPI, Cards, NetBanking, Wallets)', sub: 'Fast, Encrypted & Instant Confirmation' },
-                  { id: 'UPI', label: 'UPI Direct (GPay / PhonePe / Paytm / BHIM)', sub: 'Zero Payment Surcharge' },
-                ].map(opt => (
-                  <label
-                    key={opt.id}
-                    className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                      paymentMethod === opt.id ? 'border-tots-wine bg-rose-50/50 shadow-xs' : 'border-tots-border bg-tots-cream hover:bg-tots-beige'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={paymentMethod === opt.id}
-                        onChange={() => setPaymentMethod(opt.id as any)}
-                        className="accent-tots-wine w-4 h-4"
-                      />
-                      <div>
-                        <span className="font-serif font-bold text-sm text-tots-dark block">{opt.label}</span>
-                        <span className="text-[11px] text-tots-gray">{opt.sub}</span>
-                      </div>
-                    </div>
-                  </label>
-                ))}
-              </div>
 
-              {/* Notice on COD & Unboxing Video */}
-              <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs space-y-1.5">
-                <p className="font-semibold flex items-center gap-1.5">
-                  <span>ℹ️ Payment & Return Notice:</span>
-                </p>
-                <p className="text-[11px] text-amber-800 leading-normal">
-                  • <strong>Cash on Delivery (COD)</strong> is currently not available.<br />
-                  • Remember: An unedited <strong>opening/unboxing video</strong> is mandatory for any return or damage claims upon delivery.
-                </p>
-              </div>
-            </div>
 
           </div>
 
@@ -480,30 +522,43 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {/* Coupon Code Input */}
-            <div className="pt-2 border-t border-tots-border space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={e => setCouponCode(e.target.value)}
-                  placeholder="Coupon Code (TOTS10)"
-                  className="flex-1 text-xs p-2.5 rounded-lg border border-tots-border uppercase"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCoupon}
-                  className="bg-tots-dark text-white text-xs px-4 py-2.5 rounded-lg font-bold uppercase"
-                >
-                  Apply
-                </button>
+            {/* Coupon Code Input - Only displayed if valid active coupons exist in store */}
+            {activeCoupons.length > 0 && (
+              <div className="pt-2 border-t border-tots-border space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputCoupon}
+                    onChange={e => setInputCoupon(e.target.value)}
+                    placeholder="Coupon Code"
+                    className="flex-1 text-xs p-2.5 rounded-lg border border-tots-border uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    className="bg-tots-dark text-white text-xs px-4 py-2.5 rounded-lg font-bold uppercase hover:bg-tots-gold hover:text-white transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {couponMessage && (
+                  <div className="flex items-center justify-between text-xs">
+                    <p className={discount > 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600'}>
+                      {couponMessage}
+                    </p>
+                    {appliedCoupon && (
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-[11px] text-rose-600 hover:underline font-semibold"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              {couponMessage && (
-                <p className={`text-xs ${discount > 0 ? 'text-emerald-700 font-semibold' : 'text-rose-600'}`}>
-                  {couponMessage}
-                </p>
-              )}
-            </div>
+            )}
 
             {/* Price Calculations */}
             <div className="space-y-2 text-xs text-tots-gray pt-3 border-t border-tots-border">
@@ -513,7 +568,7 @@ export default function CheckoutPage() {
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-emerald-700">
-                  <span>Coupon Discount</span>
+                  <span>Coupon Discount ({appliedCoupon?.code})</span>
                   <span className="font-semibold">-₹{discount}</span>
                 </div>
               )}

@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. INSTAGRAM GALLERY
+-- 7. INSTAGRAM GALLERY & PROMO CARDS
 CREATE TABLE IF NOT EXISTS public.instagram_posts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     image_url TEXT NOT NULL,
@@ -113,6 +113,22 @@ CREATE TABLE IF NOT EXISTS public.instagram_posts (
     display_order INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.promo_cards (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    label TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    button_text TEXT DEFAULT 'SHOP NOW',
+    button_url TEXT DEFAULT '/shop',
+    image_url TEXT DEFAULT '',
+    bg_color TEXT DEFAULT 'cream',
+    text_color TEXT DEFAULT 'dark',
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 7. WISHLIST
@@ -145,6 +161,7 @@ CREATE TABLE IF NOT EXISTS public.cart_items (
 CREATE TABLE IF NOT EXISTS public.addresses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    label TEXT DEFAULT 'Home',
     full_name TEXT NOT NULL,
     phone TEXT NOT NULL,
     street TEXT NOT NULL,
@@ -175,6 +192,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     payment_status TEXT DEFAULT 'Pending' CHECK (payment_status IN ('Pending', 'Paid', 'Failed', 'Refunded')),
     payment_method TEXT DEFAULT 'Razorpay',
     payment_id TEXT,
+    razorpay_order_id TEXT,
     tracking_number TEXT,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -281,9 +299,14 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR 
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (TRUE);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (TRUE);
 
--- 2. Banners & Marketing
+ALTER TABLE public.promo_cards ENABLE ROW LEVEL SECURITY;
+
+-- 2. Banners, Promo Cards & Marketing
 CREATE POLICY "Allow public read banners" ON public.banners FOR SELECT USING (TRUE);
 CREATE POLICY "Allow all modify banners" ON public.banners FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+CREATE POLICY "Allow public read promo_cards" ON public.promo_cards FOR SELECT USING (TRUE);
+CREATE POLICY "Allow all modify promo_cards" ON public.promo_cards FOR ALL USING (TRUE) WITH CHECK (TRUE);
 
 CREATE POLICY "Allow public read announcements" ON public.announcements FOR SELECT USING (TRUE);
 CREATE POLICY "Allow all modify announcements" ON public.announcements FOR ALL USING (TRUE) WITH CHECK (TRUE);

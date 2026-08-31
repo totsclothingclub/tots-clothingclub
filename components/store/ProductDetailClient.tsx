@@ -220,7 +220,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
           {/* Price & Taxes */}
           <div className="space-y-1 py-2 border-y border-border/80">
             <div className="flex items-baseline gap-3">
-              <span className="font-serif text-3xl font-bold text-wine">
+              <span className="font-sans text-3xl font-bold text-wine">
                 ₹{sale.toLocaleString('en-IN')}
               </span>
               {regular > sale && (
@@ -443,8 +443,8 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
               {openAccordion === 'ship' && (
                 <div className="pb-4 text-mid leading-relaxed space-y-1.5">
                   <p>• Standard domestic delivery within 3–5 business days.</p>
-                  <p>• Free shipping on all orders above ₹999.</p>
-                  <p>• Hassle-free 7-day exchange and return policy.</p>
+                  <p>• Flat rate pan-India shipping with real-time tracking.</p>
+                  <p>• Unedited opening video mandatory for any damage or return claims.</p>
                 </div>
               )}
             </div>

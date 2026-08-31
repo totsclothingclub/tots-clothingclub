@@ -101,6 +101,7 @@ export interface CartItem {
 export interface Address {
   id?: string
   user_id?: string
+  label?: 'Home' | 'Office' | 'Other' | string
   full_name: string
   phone: string
   street: string
@@ -110,6 +111,16 @@ export interface Address {
   pincode: string
   country: string
   is_default?: boolean
+}
+
+export interface UserProfile {
+  id: string
+  email: string
+  full_name: string
+  phone?: string
+  role?: 'customer' | 'admin'
+  created_at?: string
+  addresses?: Address[]
 }
 
 export interface OrderItem {
@@ -142,6 +153,7 @@ export interface Order {
   payment_status: 'Pending' | 'Paid' | 'Failed' | 'Refunded'
   payment_method: string
   payment_id?: string
+  razorpay_order_id?: string
   tracking_number?: string
   notes?: string
   items?: OrderItem[]

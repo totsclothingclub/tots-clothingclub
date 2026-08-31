@@ -15,7 +15,6 @@ import {
   InstagramPost,
   PromoCard
 } from '../types'
-import { INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './mock-data'
 
 // Dynamic default state
 const DEFAULT_SETTINGS: StoreSettings = {
@@ -25,8 +24,8 @@ const DEFAULT_SETTINGS: StoreSettings = {
   support_email: 'care@tots.in',
   support_phone: '+91 85940 41490',
   currency: '₹',
-  free_shipping_threshold: 999.0,
-  standard_shipping_fee: 99.0,
+  free_shipping_threshold: 0,
+  standard_shipping_fee: 80.0,
   instagram_handle: '@tots_clothingclub'
 }
 
@@ -34,17 +33,12 @@ let storeSettings: StoreSettings = { ...DEFAULT_SETTINGS }
 let announcements: Announcement[] = []
 let banners: Banner[] = []
 let instagramPosts: InstagramPost[] = []
-let categories: Category[] = [...INITIAL_CATEGORIES]
-let products: Product[] = [...INITIAL_PRODUCTS]
+let categories: Category[] = []
+let products: Product[] = []
 let coupons: Coupon[] = []
 let reviews: Review[] = []
 let orders: Order[] = []
-
-let promoCards: PromoCard[] = [
-  { id: 'promo-1', label: 'SPECIAL DROP', title: 'STYLE UNDER ₹499', description: 'Everything you love. Nothing over ₹499.', button_text: 'SHOP NOW', button_url: '/shop?maxPrice=499', image_url: '', bg_color: 'wine', text_color: 'white', display_order: 1, is_active: true },
-  { id: 'promo-2', label: 'XS TO 7XL', title: 'PLUS SIZE COLLECTION', description: 'Fashion that fits beautifully and feels amazing.', button_text: 'EXPLORE NOW', button_url: '/shop?category=plus-size', image_url: '', bg_color: 'cream', text_color: 'dark', display_order: 2, is_active: true },
-  { id: 'promo-3', label: 'NEW SEASON', title: 'NEW ARRIVALS', description: 'Fresh styles. Just for you.', button_text: 'SHOP NOW', button_url: '/shop?category=new-arrivals', image_url: '', bg_color: 'cream', text_color: 'dark', display_order: 3, is_active: true },
-]
+let promoCards: PromoCard[] = []
 
 function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -1030,6 +1024,22 @@ export async function validateCoupon(
   }
 }
 
+export async function getActiveCoupons(): Promise<Coupon[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('is_active', true)
+      if (!error && data) {
+        return data as Coupon[]
+      }
+    } catch (e) {}
+  }
+  return coupons.filter(c => c.is_active)
+}
+
 export async function getAllCoupons(): Promise<Coupon[]> {
   if (isSupabaseConfigured()) {
     try {
@@ -1206,9 +1216,9 @@ export async function deleteReview(id: string): Promise<boolean> {
 // ORDERS & CHECKOUT
 // -------------------------------------------------------------
 export async function createOrder(orderPayload: Partial<Order>): Promise<Order> {
-  const orderNumber = `TOTS-${Math.floor(10000 + Math.random() * 90000)}`
+  const orderNumber = orderPayload.order_number || `TOTS-${Math.floor(10000 + Math.random() * 90000)}`
   const newOrder: Order = {
-    id: `ord-${Date.now()}`,
+    id: orderPayload.id || `ord-${Date.now()}`,
     order_number: orderNumber,
     customer_name: orderPayload.customer_name || 'Customer',
     customer_email: orderPayload.customer_email || 'customer@example.com',
@@ -1219,54 +1229,66 @@ export async function createOrder(orderPayload: Partial<Order>): Promise<Order> 
     shipping_fee: orderPayload.shipping_fee || 0,
     tax: orderPayload.tax || 0,
     total: orderPayload.total || 0,
-    order_status: 'Processing',
-    payment_status: 'Paid',
+    order_status: orderPayload.order_status || 'Processing',
+    payment_status: orderPayload.payment_status || 'Paid',
     payment_method: orderPayload.payment_method || 'Razorpay',
     payment_id: orderPayload.payment_id || `pay_${Math.random().toString(36).substring(2, 12)}`,
-    tracking_number: `TOTS-TRK-${Math.floor(100000 + Math.random() * 900000)}`,
+    razorpay_order_id: orderPayload.razorpay_order_id,
+    tracking_number: orderPayload.tracking_number || `TOTS-TRK-${Math.floor(100000 + Math.random() * 900000)}`,
+    notes: orderPayload.notes,
     items: orderPayload.items || [],
-    created_at: new Date().toISOString()
+    created_at: orderPayload.created_at || new Date().toISOString()
   }
 
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
+      const insertPayload: any = {
+        order_number: orderNumber,
+        customer_name: newOrder.customer_name,
+        customer_email: newOrder.customer_email,
+        customer_phone: newOrder.customer_phone,
+        shipping_address: newOrder.shipping_address,
+        subtotal: newOrder.subtotal,
+        discount: newOrder.discount,
+        shipping_fee: newOrder.shipping_fee,
+        tax: newOrder.tax,
+        total: newOrder.total,
+        order_status: newOrder.order_status,
+        payment_status: newOrder.payment_status,
+        payment_method: newOrder.payment_method,
+        payment_id: newOrder.payment_id,
+        tracking_number: newOrder.tracking_number,
+        notes: newOrder.notes,
+      }
+      if (newOrder.razorpay_order_id) {
+        insertPayload.razorpay_order_id = newOrder.razorpay_order_id
+      }
+
       const { data, error } = await supabase
         .from('orders')
-        .insert([{
-          order_number: orderNumber,
-          customer_name: newOrder.customer_name,
-          customer_email: newOrder.customer_email,
-          customer_phone: newOrder.customer_phone,
-          shipping_address: newOrder.shipping_address,
-          subtotal: newOrder.subtotal,
-          discount: newOrder.discount,
-          shipping_fee: newOrder.shipping_fee,
-          tax: newOrder.tax,
-          total: newOrder.total,
-          order_status: newOrder.order_status,
-          payment_status: newOrder.payment_status,
-          payment_method: newOrder.payment_method,
-          payment_id: newOrder.payment_id,
-          tracking_number: newOrder.tracking_number
-        }])
+        .insert([insertPayload])
         .select()
         .single()
 
-      if (!error && data && newOrder.items && newOrder.items.length > 0) {
-        const itemRows = newOrder.items.map(item => ({
-          order_id: data.id,
-          product_id: item.product_id || null,
-          variant_id: item.variant_id || null,
-          product_name: item.product_name,
-          size: item.size,
-          color: item.color,
-          price: item.price,
-          quantity: item.quantity,
-          image_url: item.image_url
-        }))
-        await supabase.from('order_items').insert(itemRows)
+      if (!error && data) {
+        if (newOrder.items && newOrder.items.length > 0) {
+          const itemRows = newOrder.items.map(item => ({
+            order_id: data.id,
+            product_id: item.product_id || null,
+            variant_id: item.variant_id || null,
+            product_name: item.product_name,
+            size: item.size,
+            color: item.color,
+            price: item.price,
+            quantity: item.quantity,
+            image_url: item.image_url
+          }))
+          await supabase.from('order_items').insert(itemRows)
+        }
         return { ...newOrder, id: data.id }
+      } else if (error) {
+        console.warn('Supabase createOrder error, falling back to in-memory:', error.message)
       }
     } catch (e) {
       console.warn('Supabase createOrder failed', e)
@@ -1275,6 +1297,123 @@ export async function createOrder(orderPayload: Partial<Order>): Promise<Order> 
 
   orders.unshift(newOrder)
   return newOrder
+}
+
+export async function getOrderByRazorpayOrderId(razorpayOrderId: string): Promise<Order | null> {
+  if (!razorpayOrderId) return null
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, items:order_items(*)')
+        .eq('razorpay_order_id', razorpayOrderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!error && data) {
+        return data as Order
+      }
+    } catch (e) {
+      console.warn('Supabase getOrderByRazorpayOrderId failed', e)
+    }
+  }
+  return orders.find(o => o.razorpay_order_id === razorpayOrderId) || null
+}
+
+export async function markOrderAsPaid(params: {
+  razorpay_order_id?: string
+  order_id?: string
+  payment_id: string
+  payment_method?: string
+}): Promise<Order | null> {
+  const { razorpay_order_id, order_id, payment_id, payment_method } = params
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const updateData: any = {
+        payment_status: 'Paid',
+        order_status: 'Processing',
+        payment_id,
+        updated_at: new Date().toISOString(),
+      }
+      if (payment_method) {
+        updateData.payment_method = payment_method
+      }
+
+      let query = supabase.from('orders').update(updateData)
+      if (order_id) {
+        query = query.eq('id', order_id)
+      } else if (razorpay_order_id) {
+        query = query.eq('razorpay_order_id', razorpay_order_id)
+      } else {
+        return null
+      }
+
+      const { data, error } = await query.select('*, items:order_items(*)').maybeSingle()
+      if (!error && data) {
+        // update local cache as well
+        orders = orders.map(o => (o.id === data.id ? (data as Order) : o))
+        return data as Order
+      }
+    } catch (e) {
+      console.warn('Supabase markOrderAsPaid failed', e)
+    }
+  }
+
+  // In-memory fallback
+  const existing = orders.find(
+    o => (order_id && o.id === order_id) || (razorpay_order_id && o.razorpay_order_id === razorpay_order_id)
+  )
+  if (existing) {
+    existing.payment_status = 'Paid'
+    existing.order_status = 'Processing'
+    existing.payment_id = payment_id
+    if (payment_method) existing.payment_method = payment_method
+    return existing
+  }
+  return null
+}
+
+export async function markOrderAsFailed(params: {
+  razorpay_order_id?: string
+  order_id?: string
+  notes?: string
+}): Promise<Order | null> {
+  const { razorpay_order_id, order_id, notes } = params
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      let query = supabase.from('orders').update({
+        payment_status: 'Failed',
+        notes: notes || 'Payment failed on gateway',
+        updated_at: new Date().toISOString(),
+      })
+      if (order_id) query = query.eq('id', order_id)
+      else if (razorpay_order_id) query = query.eq('razorpay_order_id', razorpay_order_id)
+      else return null
+
+      const { data, error } = await query.select('*, items:order_items(*)').maybeSingle()
+      if (!error && data) {
+        orders = orders.map(o => (o.id === data.id ? (data as Order) : o))
+        return data as Order
+      }
+    } catch (e) {
+      console.warn('Supabase markOrderAsFailed failed', e)
+    }
+  }
+
+  const existing = orders.find(
+    o => (order_id && o.id === order_id) || (razorpay_order_id && o.razorpay_order_id === razorpay_order_id)
+  )
+  if (existing) {
+    existing.payment_status = 'Failed'
+    if (notes) existing.notes = notes
+    return existing
+  }
+  return null
 }
 
 export async function getAllOrders(): Promise<Order[]> {

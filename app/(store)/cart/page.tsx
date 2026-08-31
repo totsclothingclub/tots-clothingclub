@@ -10,8 +10,7 @@ import { Trash2, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart()
-  const freeShippingThreshold = 999
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal)
+  const shippingFee = 80
 
   return (
     <div className="min-h-screen flex flex-col bg-tots-cream">
@@ -107,12 +106,12 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping Fee</span>
-                  <span>{remainingForFreeShipping === 0 ? <strong className="text-emerald-700">FREE</strong> : '₹99'}</span>
+                  <span className="font-semibold text-tots-dark">₹{shippingFee}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold text-tots-dark pt-3 border-t border-tots-border">
                   <span>Total Amount</span>
                   <span className="text-tots-wine font-serif text-2xl">
-                    ₹{subtotal + (remainingForFreeShipping === 0 ? 0 : 99)}
+                    ₹{subtotal + shippingFee}
                   </span>
                 </div>
               </div>
