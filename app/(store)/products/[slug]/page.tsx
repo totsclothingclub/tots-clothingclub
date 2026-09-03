@@ -2,7 +2,6 @@ import React from 'react'
 import { notFound } from 'next/navigation'
 import { Header } from '@/components/store/Header'
 import { Footer } from '@/components/store/Footer'
-import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { getProductBySlug, getProductReviews } from '@/lib/supabase/data-service'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 
@@ -32,7 +31,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       </main>
 
       <Footer />
-      <MobileBottomNav />
     </div>
   )
 }
