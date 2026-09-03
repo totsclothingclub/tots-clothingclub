@@ -225,15 +225,13 @@ export interface DashboardStats {
 export interface InstagramPost {
   id: string
   image_url: string
-  video_url?: string
-  caption?: string
-  embed_html?: string
-  author_name?: string
-  tag?: string
+  instagram_url?: string
   post_url?: string
+  caption?: string
   display_order: number
   is_active: boolean
   created_at?: string
+  updated_at?: string
 }
 
 export interface PromoCard {

@@ -18,24 +18,25 @@ export async function POST(req: NextRequest) {
   try {
     const postData = await req.json()
 
-    // Must have at least a video URL or image thumbnail
-    if (!postData.video_url && !postData.image_url) {
-      return NextResponse.json({ error: 'Please upload a video file or cover thumbnail image.' }, { status: 400 })
+    // Must have image_url
+    if (!postData.image_url || !postData.image_url.trim()) {
+      return NextResponse.json({ error: 'Please upload an image for the Instagram post.' }, { status: 400 })
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     let result: any = null
 
+    const igUrl = (postData.instagram_url || postData.post_url || 'https://instagram.com/tots_clothingclub').trim()
+
     const payload: any = {
-      image_url: postData.image_url || '/images/placeholder.jpg',
-      video_url: postData.video_url || null,
-      caption: postData.caption || '',
-      tag: postData.tag || null,
-      author_name: postData.author_name || 'tots_clothingclub',
-      post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+      image_url: postData.image_url.trim(),
+      instagram_url: igUrl,
+      post_url: igUrl,
+      caption: postData.caption?.trim() || '',
       display_order: Number(postData.display_order) || 1,
-      is_active: postData.is_active ?? true
+      is_active: postData.is_active ?? true,
+      updated_at: new Date().toISOString()
     }
 
     if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
@@ -49,9 +50,9 @@ export async function POST(req: NextRequest) {
           .select()
           .single()
 
-        if (error && (error.message?.includes('video_url') || error.message?.includes('caption'))) {
-          // Retry without new columns if DB migration is pending
-          const { video_url, caption, ...basicPayload } = payload
+        if (error && (error.message?.includes('instagram_url') || error.message?.includes('caption') || error.code === '42703')) {
+          // Retry with basic columns if migration is pending
+          const { instagram_url, updated_at, ...basicPayload } = payload
           const retry = await supabase
             .from('instagram_posts')
             .update(basicPayload)
@@ -71,9 +72,9 @@ export async function POST(req: NextRequest) {
           .select()
           .single()
 
-        if (error && (error.message?.includes('video_url') || error.message?.includes('caption'))) {
-          // Retry without new columns if DB migration is pending
-          const { video_url, caption, ...basicPayload } = payload
+        if (error && (error.message?.includes('instagram_url') || error.message?.includes('caption') || error.code === '42703')) {
+          // Retry with basic columns if migration is pending
+          const { instagram_url, updated_at, ...basicPayload } = payload
           const retry = await supabase
             .from('instagram_posts')
             .insert([basicPayload])
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error('Save Instagram Video error:', error)
+    console.error('Save Instagram Post error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

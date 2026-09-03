@@ -215,7 +215,8 @@ export async function deleteBanner(id: string): Promise<boolean> {
 }
 
 // -------------------------------------------------------------
-// INSTAGRAM GALLERY (Cloudinary + Supabase)
+// -------------------------------------------------------------
+// INSTAGRAM POSTS & IMAGES (Supabase Database & Storage)
 // -------------------------------------------------------------
 export async function getInstagramPosts(): Promise<InstagramPost[]> {
   if (isSupabaseConfigured()) {
@@ -226,12 +227,25 @@ export async function getInstagramPosts(): Promise<InstagramPost[]> {
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true })
-      if (!error && data) return data as InstagramPost[]
+      if (!error && data) {
+        return (data as any[]).map(p => ({
+          ...p,
+          instagram_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub',
+          post_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub'
+        })) as InstagramPost[]
+      }
     } catch (e) {
       console.warn('Supabase getInstagramPosts failed', e)
     }
   }
-  return instagramPosts.filter(p => p.is_active).sort((a, b) => a.display_order - b.display_order)
+  return instagramPosts
+    .filter(p => p.is_active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(p => ({
+      ...p,
+      instagram_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub',
+      post_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub'
+    }))
 }
 
 export async function getAllInstagramPosts(): Promise<InstagramPost[]> {
@@ -243,8 +257,13 @@ export async function getAllInstagramPosts(): Promise<InstagramPost[]> {
         .select('*')
         .order('display_order', { ascending: true })
       if (!error && data) {
-        instagramPosts = data as InstagramPost[]
-        return instagramPosts
+        const mapped = (data as any[]).map(p => ({
+          ...p,
+          instagram_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub',
+          post_url: p.instagram_url || p.post_url || 'https://instagram.com/tots_clothingclub'
+        })) as InstagramPost[]
+        instagramPosts = mapped
+        return mapped
       }
     } catch (e) {
       console.warn('Supabase getAllInstagramPosts failed', e)
@@ -254,23 +273,24 @@ export async function getAllInstagramPosts(): Promise<InstagramPost[]> {
 }
 
 export async function saveInstagramPost(postData: Partial<InstagramPost>): Promise<InstagramPost> {
+  const igUrl = postData.instagram_url?.trim() || postData.post_url?.trim() || 'https://instagram.com/tots_clothingclub'
+  
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
       const fullPayload: any = {
-        image_url: postData.image_url || '/images/placeholder.jpg',
-        video_url: postData.video_url || null,
+        image_url: postData.image_url || '',
+        instagram_url: igUrl,
+        post_url: igUrl,
         caption: postData.caption || '',
-        tag: postData.tag || null,
-        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
         display_order: Number(postData.display_order) || 1,
-        is_active: postData.is_active ?? true
+        is_active: postData.is_active ?? true,
+        updated_at: new Date().toISOString()
       }
 
       const basicPayload: any = {
-        image_url: postData.image_url || '/images/placeholder.jpg',
-        tag: postData.tag || null,
-        post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
+        image_url: postData.image_url || '',
+        post_url: igUrl,
         display_order: Number(postData.display_order) || 1,
         is_active: postData.is_active ?? true
       }
@@ -283,7 +303,7 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
           .select()
           .single()
 
-        if (error && (error.message?.includes('video_url') || error.message?.includes('caption') || error.code === '42703')) {
+        if (error && (error.message?.includes('instagram_url') || error.message?.includes('caption') || error.code === '42703')) {
           const retry = await supabase
             .from('instagram_posts')
             .update(basicPayload)
@@ -295,8 +315,13 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
         }
 
         if (!error && data) {
-          instagramPosts = instagramPosts.map(p => (p.id === data.id ? (data as InstagramPost) : p))
-          return data as InstagramPost
+          const formatted: InstagramPost = {
+            ...data,
+            instagram_url: data.instagram_url || data.post_url || igUrl,
+            post_url: data.instagram_url || data.post_url || igUrl
+          }
+          instagramPosts = instagramPosts.map(p => (p.id === formatted.id ? formatted : p))
+          return formatted
         }
       } else {
         let { data, error } = await supabase
@@ -305,7 +330,7 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
           .select()
           .single()
 
-        if (error && (error.message?.includes('video_url') || error.message?.includes('caption') || error.code === '42703')) {
+        if (error && (error.message?.includes('instagram_url') || error.message?.includes('caption') || error.code === '42703')) {
           const retry = await supabase
             .from('instagram_posts')
             .insert([basicPayload])
@@ -316,8 +341,13 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
         }
 
         if (!error && data) {
-          instagramPosts.push(data as InstagramPost)
-          return data as InstagramPost
+          const formatted: InstagramPost = {
+            ...data,
+            instagram_url: data.instagram_url || data.post_url || igUrl,
+            post_url: data.instagram_url || data.post_url || igUrl
+          }
+          instagramPosts.push(formatted)
+          return formatted
         }
       }
     } catch (e) {
@@ -327,18 +357,29 @@ export async function saveInstagramPost(postData: Partial<InstagramPost>): Promi
 
   // Fallback in-memory
   if (postData.id) {
-    instagramPosts = instagramPosts.map(p => (p.id === postData.id ? ({ ...p, ...postData } as InstagramPost) : p))
-    return instagramPosts.find(p => p.id === postData.id)!
+    const updated: InstagramPost = {
+      id: postData.id,
+      image_url: postData.image_url || '',
+      instagram_url: igUrl,
+      post_url: igUrl,
+      caption: postData.caption || '',
+      display_order: Number(postData.display_order) || 1,
+      is_active: postData.is_active ?? true,
+      updated_at: new Date().toISOString()
+    }
+    instagramPosts = instagramPosts.map(p => (p.id === postData.id ? updated : p))
+    return updated
   } else {
     const newPost: InstagramPost = {
       id: `ig-${Date.now()}`,
-      image_url: postData.image_url || '/images/placeholder.jpg',
-      video_url: postData.video_url,
+      image_url: postData.image_url || '',
+      instagram_url: igUrl,
+      post_url: igUrl,
       caption: postData.caption || '',
-      tag: postData.tag,
-      post_url: postData.post_url || 'https://instagram.com/tots_clothingclub',
       display_order: Number(postData.display_order) || instagramPosts.length + 1,
-      is_active: postData.is_active ?? true
+      is_active: postData.is_active ?? true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
     instagramPosts.push(newPost)
     return newPost
@@ -676,9 +717,35 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
       const { data, error } = await query
       if (!error && data) {
         let list = data as Product[]
+
+        // Category filter
         if (options.categorySlug && options.categorySlug !== 'all') {
           list = list.filter(p => matchesCategory(p, options.categorySlug!, currentCategories))
         }
+
+        // Size filter — normalize casing/whitespace before comparing
+        if (options.size && options.size !== 'all') {
+          const selectedSizes = options.size
+            .split(',')
+            .map(s => s.trim().toUpperCase())
+          list = list.filter(p => {
+            // Try available_sizes array first
+            if (p.available_sizes && p.available_sizes.length > 0) {
+              return p.available_sizes.some(
+                sz => selectedSizes.includes(sz.trim().toUpperCase())
+              )
+            }
+            // Fall back to variants
+            if (p.variants && p.variants.length > 0) {
+              return p.variants.some(
+                v => selectedSizes.includes(v.size.trim().toUpperCase())
+              )
+            }
+            return false
+          })
+        }
+
+        // Search filter
         if (options.searchQuery && options.searchQuery.trim()) {
           const q = options.searchQuery.toLowerCase().trim()
           list = list.filter(
@@ -688,6 +755,27 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
               p.sku?.toLowerCase().includes(q)
           )
         }
+
+        // Sorting
+        if (options.sortBy) {
+          switch (options.sortBy) {
+            case 'price-low':
+              list.sort((a, b) => (a.sale_price ?? a.regular_price) - (b.sale_price ?? b.regular_price))
+              break
+            case 'price-high':
+              list.sort((a, b) => (b.sale_price ?? b.regular_price) - (a.sale_price ?? a.regular_price))
+              break
+            case 'newest':
+              list.sort((a, b) => (b.is_new_arrival ? 1 : 0) - (a.is_new_arrival ? 1 : 0))
+              break
+            case 'rating':
+              list.sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0))
+              break
+            default:
+              list.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0))
+          }
+        }
+
         return list
       }
     } catch (e) {
@@ -703,8 +791,22 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
   }
 
   if (options.size && options.size !== 'all') {
-    const selectedSizes = options.size.split(',')
-    result = result.filter(p => p.available_sizes?.some(sz => selectedSizes.includes(sz)))
+    const selectedSizes = options.size
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+    result = result.filter(p => {
+      if (p.available_sizes && p.available_sizes.length > 0) {
+        return p.available_sizes.some(
+          sz => selectedSizes.includes(sz.trim().toUpperCase())
+        )
+      }
+      if (p.variants && p.variants.length > 0) {
+        return p.variants.some(
+          v => selectedSizes.includes(v.size.trim().toUpperCase())
+        )
+      }
+      return false
+    })
   }
 
   if (options.color && options.color !== 'all') {
