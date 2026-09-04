@@ -25,7 +25,7 @@ import {
   CheckCircle2
 } from 'lucide-react'
 
-export const revalidate = 0
+export const revalidate = 300 // 5-minute Incremental Static Regeneration (ISR) to protect Vercel CPU limits
 
 export default async function HomePage() {
   const [banners, rawCategories, products, allProducts, dynamicIgPosts, promoCards, storeSettings] = await Promise.all([

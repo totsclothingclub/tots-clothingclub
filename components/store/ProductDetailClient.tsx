@@ -33,7 +33,7 @@ interface ProductDetailClientProps {
 
 export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ product, initialReviews }) => {
   const router = useRouter()
-  const { addItem, totalItemCount } = useCart()
+  const { addItem, setIsDrawerOpen, totalItemCount } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
 
   const images = product.images && product.images.length > 0
@@ -107,7 +107,8 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
   const handleBuyNow = () => {
     if (isOutOfStock) return
-    addItem(product, activeVariant, quantity)
+    setIsDrawerOpen(false)
+    addItem(product, activeVariant, quantity, false)
     router.push('/checkout')
   }
 

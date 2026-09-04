@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAllBanners, saveBanner, deleteBanner } from '@/lib/supabase/data-service'
+import { deleteImageByUrlFromCloudinary } from '@/lib/cloudinary'
 
 export async function GET() {
   try {
@@ -84,7 +85,18 @@ export async function DELETE(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
+      const { data: bData } = await supabase.from('banners').select('desktop_image_url, mobile_image_url').eq('id', id).single()
+
       await supabase.from('banners').delete().eq('id', id)
+
+      if (bData) {
+        if (bData.desktop_image_url) {
+          try { await deleteImageByUrlFromCloudinary(bData.desktop_image_url) } catch (e) {}
+        }
+        if (bData.mobile_image_url && bData.mobile_image_url !== bData.desktop_image_url) {
+          try { await deleteImageByUrlFromCloudinary(bData.mobile_image_url) } catch (e) {}
+        }
+      }
     }
 
     await deleteBanner(id)
