@@ -47,8 +47,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${oswald.variable} ${lato.variable}`}>
-      <body className={`${lato.className} font-sans bg-cream text-charcoal min-h-screen flex flex-col antialiased`} style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}>
+    <html lang="en" className={`${oswald.variable} ${lato.variable}`} suppressHydrationWarning>
+      <body
+        className={`${lato.className} font-sans bg-cream text-charcoal min-h-screen flex flex-col antialiased`}
+        style={{ background: 'var(--cream)', color: 'var(--charcoal)' }}
+        suppressHydrationWarning
+      >
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
