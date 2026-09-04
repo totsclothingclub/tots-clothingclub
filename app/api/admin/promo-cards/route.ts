@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAllPromoCards, savePromoCard, deletePromoCard } from '@/lib/supabase/data-service'
+import { deleteImageByUrlFromCloudinary } from '@/lib/cloudinary'
 
 export async function GET() {
   try {
@@ -88,7 +89,13 @@ export async function DELETE(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
+      const { data: pData } = await supabase.from('promo_cards').select('image_url').eq('id', id).single()
+
       await supabase.from('promo_cards').delete().eq('id', id)
+
+      if (pData?.image_url) {
+        try { await deleteImageByUrlFromCloudinary(pData.image_url) } catch (e) {}
+      }
     }
 
     await deletePromoCard(id)

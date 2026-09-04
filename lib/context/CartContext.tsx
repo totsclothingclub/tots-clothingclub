@@ -13,7 +13,7 @@ export interface CartLineItem {
 
 interface CartContextType {
   items: CartLineItem[]
-  addItem: (product: Product, variant: ProductVariant, quantity?: number) => void
+  addItem: (product: Product, variant: ProductVariant, quantity?: number, openDrawer?: boolean) => void
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, quantity: number) => void
   clearCart: () => void
@@ -144,7 +144,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
   }
 
-  const addItem = (product: Product, variant: ProductVariant, quantity = 1) => {
+  const addItem = (product: Product, variant: ProductVariant, quantity = 1, openDrawer = true) => {
     const addQty = Math.max(1, Number(quantity) || 1)
     setItems(prev => {
       const existingIndex = prev.findIndex(
@@ -166,7 +166,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ]
       }
     })
-    setIsDrawerOpen(true)
+    if (openDrawer) {
+      setIsDrawerOpen(true)
+    }
   }
 
   const removeItem = (itemId: string) => {

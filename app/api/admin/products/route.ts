@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAllAdminProducts, saveProduct, deleteProduct, getProductById } from '@/lib/supabase/data-service'
+import { deleteImageByUrlFromCloudinary } from '@/lib/cloudinary'
 
 export async function GET() {
   try {
@@ -17,6 +18,11 @@ export async function POST(req: NextRequest) {
     const productData = await req.json()
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const regPrice = Number(productData.regular_price)
+    if (!regPrice || isNaN(regPrice) || regPrice <= 0) {
+      return NextResponse.json({ error: 'Product regular_price must be a positive number' }, { status: 400 })
+    }
 
     const primaryImg =
       productData.primary_image ||
@@ -43,7 +49,7 @@ export async function POST(req: NextRequest) {
         category_ids: productData.category_ids || [],
         brand: productData.brand || 'TOTS',
         sku: productData.sku || `TOTS-SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-        regular_price: Number(productData.regular_price) || 999,
+        regular_price: regPrice,
         sale_price: productData.sale_price ? Number(productData.sale_price) : null,
         discount_percent: productData.discount_percent || 0,
         tax_percent: productData.tax_percent || 5.0,
@@ -179,7 +185,30 @@ export async function DELETE(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
+
+      // Fetch images to delete from Cloudinary
+      const { data: prodData } = await supabase.from('products').select('primary_image').eq('id', id).single()
+      const { data: prodImages } = await supabase.from('product_images').select('image_url').eq('id', id)
+
+      const imageUrls: string[] = []
+      if (prodData?.primary_image) imageUrls.push(prodData.primary_image)
+      if (prodImages) {
+        prodImages.forEach((img: any) => {
+          if (img.image_url) imageUrls.push(img.image_url)
+        })
+      }
+
+      // Delete product row from database
       await supabase.from('products').delete().eq('id', id)
+
+      // Delete images from Cloudinary
+      for (const imgUrl of imageUrls) {
+        try {
+          await deleteImageByUrlFromCloudinary(imgUrl)
+        } catch (cErr) {
+          console.warn('Failed to delete product image from Cloudinary:', imgUrl, cErr)
+        }
+      }
     }
 
     await deleteProduct(id)

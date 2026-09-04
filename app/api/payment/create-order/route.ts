@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
-import { validateCoupon, createOrder } from '@/lib/supabase/data-service'
+import { validateCoupon, createOrder, getProductById } from '@/lib/supabase/data-service'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
@@ -22,15 +23,76 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Cart items are required' }, { status: 400 })
     }
 
-    // 1. Calculate subtotal server-side to prevent tampering
-    let subtotal = 0
-    items.forEach((item: any) => {
-      const unitPrice = Number(item.product?.sale_price || item.product?.regular_price || 599)
-      const qty = Number(item.quantity || 1)
-      subtotal += unitPrice * qty
-    })
+    // 1. Fetch real product prices from database to prevent price tampering
+    const supabase = createAdminClient()
+    const productIds = items
+      .map((i: any) => i.product?.id || i.product_id || i.id)
+      .filter(Boolean)
 
-    // 2. Validate coupon if provided
+    let dbProducts: any[] = []
+    if (productIds.length > 0) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, regular_price, sale_price, primary_image')
+        .in('id', productIds)
+
+      if (!error && data) {
+        dbProducts = data
+      }
+    }
+
+    let subtotal = 0
+    const verifiedOrderItems: any[] = []
+
+    for (const item of items) {
+      const pId = item.product?.id || item.product_id || item.id
+      let dbProd = dbProducts.find((p: any) => p.id === pId)
+
+      // Fallback lookup via data-service if not in batch query
+      if (!dbProd && pId) {
+        try {
+          dbProd = await getProductById(pId)
+        } catch (e) {}
+      }
+
+      if (!dbProd) {
+        console.error('Security Warning: Attempted to purchase non-existent product ID:', pId)
+        return NextResponse.json(
+          { error: `Product "${item.product?.name || pId || 'Item'}" is invalid or no longer available` },
+          { status: 400 }
+        )
+      }
+
+      // Calculate unit price strictly from DB
+      const dbSalePrice = dbProd.sale_price !== null && dbProd.sale_price !== undefined ? Number(dbProd.sale_price) : null
+      const dbRegPrice = Number(dbProd.regular_price)
+      const unitPrice = (dbSalePrice && dbSalePrice > 0) ? dbSalePrice : dbRegPrice
+
+      if (!unitPrice || isNaN(unitPrice) || unitPrice <= 0) {
+        return NextResponse.json(
+          { error: `Product "${dbProd.name}" has an invalid price configuration` },
+          { status: 400 }
+        )
+      }
+
+      const qty = Math.max(1, Number(item.quantity || 1))
+      subtotal += unitPrice * qty
+
+      verifiedOrderItems.push({
+        id: `oi-${Math.random().toString(36).substring(2, 9)}`,
+        order_id: '',
+        product_id: dbProd.id,
+        variant_id: item.variant?.id || 'var-custom',
+        product_name: dbProd.name || item.product?.name || 'Product',
+        size: item.variant?.size || 'Standard',
+        color: item.variant?.color || 'Standard',
+        price: unitPrice,
+        quantity: qty,
+        image_url: dbProd.primary_image || item.product?.primary_image || '/images/placeholder.jpg',
+      })
+    }
+
+    // 2. Validate coupon if provided against server-computed subtotal
     let discount = 0
     if (couponCode) {
       const couponRes = await validateCoupon(couponCode, subtotal)
@@ -47,7 +109,7 @@ export async function POST(req: Request) {
     // Validate minimum amount (Razorpay requires at least 100 paise = ₹1)
     if (amountInPaise < 100) {
       return NextResponse.json(
-        { error: 'Order amount must be at least ₹1.00 (100 paise)' },
+        { error: 'Order total amount must be at least ₹1.00 (100 paise)' },
         { status: 400 }
       )
     }
@@ -73,20 +135,7 @@ export async function POST(req: Request) {
       },
     })
 
-    // 5. Pre-create pending order in DB for reconciliation (if customer drops connection)
-    const orderItems = items.map((i: any) => ({
-      id: `oi-${Math.random().toString(36).substring(2, 9)}`,
-      order_id: '',
-      product_id: i.product?.id || 'prod-custom',
-      variant_id: i.variant?.id || 'var-custom',
-      product_name: i.product?.name || 'Product',
-      size: i.variant?.size || 'Standard',
-      color: i.variant?.color || 'Standard',
-      price: Number(i.product?.sale_price || i.product?.regular_price || 0),
-      quantity: Number(i.quantity || 1),
-      image_url: i.product?.primary_image || '/images/placeholder.jpg',
-    }))
-
+    // 5. Pre-create pending order in DB for reconciliation
     let pendingOrder: any = null
     try {
       pendingOrder = await createOrder({
@@ -103,7 +152,7 @@ export async function POST(req: Request) {
         payment_status: 'Pending',
         payment_method: 'Razorpay',
         razorpay_order_id: razorpayOrder.id,
-        items: orderItems,
+        items: verifiedOrderItems,
       })
     } catch (dbErr) {
       console.warn('Failed to pre-create pending order record:', dbErr)

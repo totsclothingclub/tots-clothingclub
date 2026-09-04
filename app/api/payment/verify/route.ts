@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createOrder, getOrderByRazorpayOrderId, markOrderAsPaid } from '@/lib/supabase/data-service'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
@@ -82,30 +83,53 @@ export async function POST(req: Request) {
         finalOrderId = updated?.id || existingOrder.id
       }
     } else {
-      // Fallback: create order if not pre-created
-      const orderItems = (items || []).map((i: any) => ({
-        id: `oi-${Math.random().toString(36).substring(2, 9)}`,
-        order_id: '',
-        product_id: i.product?.id || 'prod-custom',
-        variant_id: i.variant?.id || 'var-custom',
-        product_name: i.product?.name || 'Product',
-        size: i.variant?.size || 'Standard',
-        color: i.variant?.color || 'Standard',
-        price: Number(i.product?.sale_price || i.product?.regular_price || 0),
-        quantity: Number(i.quantity || 1),
-        image_url: i.product?.primary_image || '/images/placeholder.jpg',
-      }))
+      // Fallback: create order if not pre-created (verify prices from DB)
+      const supabase = createAdminClient()
+      const productIds = (items || []).map((i: any) => i.product?.id || i.product_id || i.id).filter(Boolean)
+      let dbProducts: any[] = []
+      if (productIds.length > 0) {
+        const { data } = await supabase.from('products').select('id, name, regular_price, sale_price, primary_image').in('id', productIds)
+        if (data) dbProducts = data
+      }
+
+      let calculatedSubtotal = 0
+      const orderItems = (items || []).map((i: any) => {
+        const pId = i.product?.id || i.product_id || i.id
+        const dbProd = dbProducts.find((p: any) => p.id === pId)
+        const unitPrice = dbProd
+          ? (dbProd.sale_price !== null && dbProd.sale_price !== undefined && Number(dbProd.sale_price) > 0 ? Number(dbProd.sale_price) : Number(dbProd.regular_price))
+          : Number(i.product?.sale_price || i.product?.regular_price || 0)
+
+        const qty = Number(i.quantity || 1)
+        calculatedSubtotal += unitPrice * qty
+
+        return {
+          id: `oi-${Math.random().toString(36).substring(2, 9)}`,
+          order_id: '',
+          product_id: dbProd?.id || pId || 'prod-custom',
+          variant_id: i.variant?.id || 'var-custom',
+          product_name: dbProd?.name || i.product?.name || 'Product',
+          size: i.variant?.size || 'Standard',
+          color: i.variant?.color || 'Standard',
+          price: unitPrice,
+          quantity: qty,
+          image_url: dbProd?.primary_image || i.product?.primary_image || '/images/placeholder.jpg',
+        }
+      })
+
+      const finalSubtotal = subtotal || calculatedSubtotal
+      const finalTotal = total || Math.max(0, finalSubtotal - (discount || 0) + (shippingFee || 80) + (tax || 0))
 
       const created = await createOrder({
         customer_name: customerDetails?.full_name || 'Customer',
         customer_email: customerDetails?.email || 'customer@example.com',
         customer_phone: customerDetails?.phone || '+91 85940 41490',
         shipping_address: customerDetails,
-        subtotal: subtotal || 0,
+        subtotal: finalSubtotal,
         discount: discount || 0,
         shipping_fee: shippingFee || 80,
         tax: tax || 0,
-        total: total || 0,
+        total: finalTotal,
         order_status: 'Processing',
         payment_status: 'Paid',
         payment_method: paymentMethod || 'Razorpay',

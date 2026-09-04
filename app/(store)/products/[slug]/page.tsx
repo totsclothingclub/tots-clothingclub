@@ -5,7 +5,7 @@ import { Footer } from '@/components/store/Footer'
 import { getProductBySlug, getProductReviews } from '@/lib/supabase/data-service'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 
-export const revalidate = 0
+export const revalidate = 300 // 5-minute ISR cache for product detail pages
 
 interface ProductDetailPageProps {
   params: {
