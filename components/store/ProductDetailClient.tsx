@@ -128,7 +128,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
   }
 
   return (
-    <div className="space-y-4 lg:space-y-6 max-w-6xl mx-auto pb-12 lg:pb-16">
+    <div className="space-y-4 lg:space-y-6 max-w-6xl mx-auto pb-24 lg:pb-16">
       
       {/* ── Mobile Top Back Bar (Screen 3 Reference) ── */}
       <div className="flex lg:hidden items-center justify-between py-2 border-b border-border">
@@ -224,26 +224,6 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
             </div>
           </div>
 
-          {/* Price & Taxes */}
-          <div className="space-y-1 py-2 border-y border-border/80">
-            <div className="flex items-baseline gap-3">
-              <span className="font-sans text-3xl font-bold text-wine">
-                ₹{sale.toLocaleString('en-IN')}
-              </span>
-              {regular > sale && (
-                <span className="text-sm line-through text-mid font-medium">
-                  ₹{regular.toLocaleString('en-IN')}
-                </span>
-              )}
-              {discount > 0 && (
-                <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                  {discount}% OFF
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-mid">Inclusive of all taxes</p>
-          </div>
-
           {/* ── Color Swatches — Only rendered when admin has added colors ── */}
           {colors.length > 0 && (
             <div className="space-y-2">
@@ -282,7 +262,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
             </div>
           )}
 
-          {/* ── Size Selector & Size Guide (Exact Reference) ── */}
+          {/* ── Size Selector & Size Guide — shown BEFORE price ── */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-charcoal">
@@ -322,9 +302,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
             {isOutOfStock ? (
               <div className="flex items-center gap-2 pt-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
-                <span className="text-xs text-rose-600 font-bold">
-                  Out of Stock
-                </span>
+                <span className="text-xs text-rose-600 font-bold">Out of Stock</span>
               </div>
             ) : isLowStock ? (
               <div className="flex items-center gap-2 pt-1">
@@ -341,6 +319,26 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Price & Taxes — shown AFTER size */}
+          <div className="space-y-1 py-2 border-y border-border/80">
+            <div className="flex items-baseline gap-3">
+              <span className="font-sans text-3xl font-bold text-wine">
+                ₹{sale.toLocaleString('en-IN')}
+              </span>
+              {regular > sale && (
+                <span className="text-sm line-through text-mid font-medium">
+                  ₹{regular.toLocaleString('en-IN')}
+                </span>
+              )}
+              {discount > 0 && (
+                <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                  {discount}% OFF
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-mid">Inclusive of all taxes</p>
           </div>
 
           {/* ── Product Highlights (Exact Reference) ── */}
@@ -405,8 +403,8 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
               )}
             </div>
 
-            {/* CTAs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            {/* CTAs — Desktop only (mobile uses fixed bottom bar) */}
+            <div className="hidden lg:grid grid-cols-2 gap-3 pt-2">
               {isOutOfStock ? (
                 <button
                   type="button"
@@ -540,6 +538,37 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
       </div>
 
 
+
+      {/* ── Mobile Fixed Bottom Purchase Bar (replaces MobileBottomNav on product page) ── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf7f2] border-t border-border/60 px-3.5 py-2.5 pb-[max(env(safe-area-inset-bottom),0.625rem)] shadow-[0_-2px_16px_rgba(0,0,0,0.08)]">
+        {isOutOfStock ? (
+          <button
+            type="button"
+            disabled
+            className="w-full py-3.5 bg-gray-200 text-gray-500 text-xs uppercase font-bold tracking-widest rounded-xl cursor-not-allowed text-center"
+          >
+            OUT OF STOCK
+          </button>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex-1 py-3 bg-white border-2 border-charcoal text-charcoal text-xs uppercase font-bold tracking-wider rounded-xl hover:bg-charcoal hover:text-white active:scale-[0.98] transition-all text-center flex items-center justify-center gap-1.5 whitespace-nowrap"
+            >
+              <ShoppingBag size={15} className="flex-shrink-0" />
+              <span>ADD TO CART</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="flex-1 py-3 bg-wine text-white text-xs uppercase font-bold tracking-wider rounded-xl hover:bg-wine-dark active:scale-[0.98] transition-all shadow-md text-center whitespace-nowrap"
+            >
+              BUY NOW
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ── Size Guide Modal ── */}
       {isSizeGuideOpen && (

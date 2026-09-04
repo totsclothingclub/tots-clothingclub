@@ -82,7 +82,7 @@ export default function MobileShopFilters({
   const toggleSizeQuick = (size: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '')
     const activeSizes = currentSize === 'all' || !currentSize ? [] : currentSize.split(',')
-    
+
     let newSizes: string[]
     if (activeSizes.includes(size)) {
       newSizes = activeSizes.filter(s => s !== size)
@@ -136,7 +136,7 @@ export default function MobileShopFilters({
     <>
       {/* ── Mobile Size Selector Row (Exact User Requirements) ── */}
       <div className="sm:hidden flex items-center justify-between gap-3 py-3 px-1">
-        
+
         {/* Fixed Non-Overflowing Row of first few sizes */}
         <div className="flex items-center justify-between flex-1 gap-1">
           {visibleSizes.map(size => {
@@ -146,11 +146,10 @@ export default function MobileShopFilters({
                 key={size}
                 type="button"
                 onClick={() => toggleSizeQuick(size)}
-                className={`flex-1 text-[11px] font-bold py-2 rounded-lg transition-all border text-center ${
-                  isActive
+                className={`flex-1 text-[11px] font-bold py-2 rounded-lg transition-all border text-center ${isActive
                     ? 'bg-[#141414] text-cream border-[#141414] shadow-sm'
                     : 'bg-white text-charcoal border-border/70 hover:bg-beige/40'
-                }`}
+                  }`}
               >
                 {size}
               </button>
@@ -172,27 +171,28 @@ export default function MobileShopFilters({
 
       {/* ── Mobile Sort & Filter Bar ── */}
       <div className="sm:hidden flex items-center border-t border-b border-border/60 divide-x divide-border/60">
-        
+
         {/* Sort Dropdown Button */}
-        <div className="relative flex-1">
-          <select
-            value={currentSort}
-            onChange={e => handleSortChange(e.target.value)}
-            className="w-full appearance-none bg-transparent text-xs font-semibold text-charcoal py-3 pl-10 pr-4 cursor-pointer outline-none"
-            aria-label="Sort products"
-          >
-            <option value="featured">Sort</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="newest">Newest First</option>
-            <option value="rating">Highest Rated</option>
-          </select>
-          {/* Sort icon overlay */}
+        <div className="relative flex-1 flex items-center">
+          {/* Sort icon */}
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-charcoal">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M3 6h18M7 12h10M11 18h2" strokeLinecap="round" />
             </svg>
           </span>
+          <select
+            value={currentSort}
+            onChange={e => handleSortChange(e.target.value)}
+            className="w-full appearance-none bg-transparent text-xs font-semibold text-charcoal py-3 pl-10 pr-7 cursor-pointer outline-none"
+            style={{ fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+            aria-label="Sort products"
+          >
+            <option value="featured">Featured</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="newest">Newest First</option>
+            <option value="rating">Highest Rated</option>
+          </select>
           <ChevronDown size={12} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-mid" />
         </div>
 
@@ -219,7 +219,7 @@ export default function MobileShopFilters({
 
           {/* Panel */}
           <div className="relative bg-[#faf7f2] rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto animate-fadein">
-            
+
             {/* Panel Header */}
             <div className="sticky top-0 bg-[#faf7f2] flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/60">
               <h3 className="font-serif text-base font-bold text-charcoal">Filter Products</h3>
@@ -237,28 +237,26 @@ export default function MobileShopFilters({
               {/* Category Filter */}
               <div className="space-y-3">
                 <h4 className="text-[11px] font-bold uppercase tracking-widest text-gold">Category</h4>
-                
+
                 {/* Segmented Category Group Switcher: [ SHOP ] [ PLUS SIZE ] */}
                 <div className="grid grid-cols-2 gap-2 p-1 bg-beige/60 rounded-xl border border-border/80">
                   <button
                     type="button"
                     onClick={() => setSelectedGroup('shop')}
-                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${
-                      selectedGroup === 'shop'
+                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${selectedGroup === 'shop'
                         ? 'bg-charcoal text-cream shadow-xs'
                         : 'text-charcoal hover:bg-white/60'
-                    }`}
+                      }`}
                   >
                     SHOP
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedGroup('plus_size')}
-                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${
-                      selectedGroup === 'plus_size'
+                    className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all text-center ${selectedGroup === 'plus_size'
                         ? 'bg-charcoal text-cream shadow-xs'
                         : 'text-charcoal hover:bg-white/60'
-                    }`}
+                      }`}
                   >
                     PLUS SIZE
                   </button>
@@ -271,11 +269,10 @@ export default function MobileShopFilters({
                       <Link
                         href={buildCategoryUrl(null)}
                         onClick={() => setShowFilterPanel(false)}
-                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                          currentCategorySlug === 'all'
+                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${currentCategorySlug === 'all'
                             ? 'text-wine font-bold'
                             : 'text-charcoal'
-                        }`}
+                          }`}
                       >
                         All Products
                       </Link>
@@ -284,11 +281,10 @@ export default function MobileShopFilters({
                           key={cat.id}
                           href={buildCategoryUrl(cat.slug)}
                           onClick={() => setShowFilterPanel(false)}
-                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                            currentCategorySlug === cat.slug
+                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${currentCategorySlug === cat.slug
                               ? 'text-wine font-bold'
                               : 'text-charcoal'
-                          }`}
+                            }`}
                         >
                           {cat.name}
                         </Link>
@@ -299,11 +295,10 @@ export default function MobileShopFilters({
                       <Link
                         href={buildCategoryUrl('plus-size')}
                         onClick={() => setShowFilterPanel(false)}
-                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                          currentCategorySlug === 'plus-size' || currentCategorySlug === 'all-plus-size'
+                        className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${currentCategorySlug === 'plus-size' || currentCategorySlug === 'all-plus-size'
                             ? 'text-wine font-bold'
                             : 'text-charcoal'
-                        }`}
+                          }`}
                       >
                         All Plus Size
                       </Link>
@@ -312,11 +307,10 @@ export default function MobileShopFilters({
                           key={cat.id}
                           href={buildCategoryUrl(cat.slug)}
                           onClick={() => setShowFilterPanel(false)}
-                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${
-                            currentCategorySlug === cat.slug
+                          className={`block py-2.5 text-sm font-medium border-b border-border/40 transition-colors ${currentCategorySlug === cat.slug
                               ? 'text-wine font-bold'
                               : 'text-charcoal'
-                          }`}
+                            }`}
                         >
                           {cat.name}
                         </Link>
@@ -351,7 +345,7 @@ export default function MobileShopFilters({
 
           {/* Bottom Sheet */}
           <div className="relative bg-[#faf7f2] rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto animate-fadein">
-            
+
             {/* Header */}
             <div className="sticky top-0 bg-[#faf7f2] flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/60">
               <div>
@@ -369,7 +363,7 @@ export default function MobileShopFilters({
 
             {/* Sizes Content */}
             <div className="px-5 py-5 space-y-6">
-              
+
               <div className="grid grid-cols-4 gap-2.5">
                 {sizeOptions.map(size => {
                   const isSelected = tempSizes.includes(size)
@@ -378,11 +372,10 @@ export default function MobileShopFilters({
                       key={size}
                       type="button"
                       onClick={() => toggleSizeTemp(size)}
-                      className={`text-xs font-semibold py-3 rounded-xl border transition-all flex items-center justify-center gap-1 ${
-                        isSelected
+                      className={`text-xs font-semibold py-3 rounded-xl border transition-all flex items-center justify-center gap-1 ${isSelected
                           ? 'bg-[#141414] text-cream border-[#141414] shadow-sm font-bold'
                           : 'bg-white text-charcoal border-border/70 hover:bg-beige/40'
-                      }`}
+                        }`}
                     >
                       {size}
                       {isSelected && <Check size={11} className="text-gold" />}

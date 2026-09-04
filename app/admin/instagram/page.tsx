@@ -9,16 +9,16 @@ import {
   Trash2,
   ExternalLink,
   X,
-  Play,
   CheckCircle2,
   Loader2,
-  Video,
   UploadCloud,
-  Film,
-  Sparkles,
-  Eye,
   Image as ImageIcon,
-  Link as LinkIcon
+  Eye,
+  EyeOff,
+  Link as LinkIcon,
+  Layers,
+  ArrowUpDown,
+  FileText
 } from 'lucide-react'
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
@@ -30,18 +30,14 @@ export default function AdminInstagramPage() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [uploadingVideo, setUploadingVideo] = useState(false)
-  const [uploadingThumb, setUploadingThumb] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
-  const videoInputRef = useRef<HTMLInputElement>(null)
-  const thumbInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const [editingPost, setEditingPost] = useState<Partial<InstagramPost>>({
-    video_url: '',
     image_url: '',
+    instagram_url: '',
     caption: '',
-    tag: '',
-    post_url: 'https://instagram.com/tots_clothingclub',
     display_order: 1,
     is_active: true
   })
@@ -51,9 +47,11 @@ export default function AdminInstagramPage() {
     try {
       const res = await fetch('/api/admin/instagram')
       const data = await res.json()
-      if (Array.isArray(data)) setPosts(data)
+      if (Array.isArray(data)) {
+        setPosts(data)
+      }
     } catch (e) {
-      console.error(e)
+      console.error('Failed to load Instagram posts:', e)
     } finally {
       setLoading(false)
     }
@@ -65,11 +63,9 @@ export default function AdminInstagramPage() {
 
   const handleOpenAdd = () => {
     setEditingPost({
-      video_url: '',
       image_url: '',
+      instagram_url: '',
       caption: '',
-      tag: '',
-      post_url: 'https://instagram.com/tots_clothingclub',
       display_order: posts.length + 1,
       is_active: true
     })
@@ -77,121 +73,61 @@ export default function AdminInstagramPage() {
   }
 
   const handleOpenEdit = (post: InstagramPost) => {
-    setEditingPost({ ...post })
+    setEditingPost({
+      ...post,
+      instagram_url: post.instagram_url || post.post_url || ''
+    })
     setIsModalOpen(true)
   }
 
-  // Upload Video File directly to Cloudinary (Bypasses Vercel 4.5MB Serverless Limit)
-  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload image only to Supabase Storage
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setUploadingVideo(true)
+    // Strict image validation
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files (JPG, PNG, WebP) are allowed. Video files are not supported.', 'Invalid File Type')
+      if (imageInputRef.current) imageInputRef.current.value = ''
+      return
+    }
+
+    setUploadingImage(true)
     try {
-      // 1. Get signed credentials from serverless sign endpoint (< 1KB payload)
-      const signRes = await fetch('/api/cloudinary/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder: 'instagram_videos' })
-      })
-
-      if (!signRes.ok) {
-        const signData = await signRes.json().catch(() => ({}))
-        throw new Error(signData.error || 'Failed to get Cloudinary upload authorization')
-      }
-
-      const { signature, timestamp, apiKey, cloudName, folder } = await signRes.json()
-
-      // 2. Upload DIRECTLY to Cloudinary's Video API (supports up to 100MB+)
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('api_key', apiKey)
-      formData.append('timestamp', timestamp.toString())
-      formData.append('signature', signature)
-      formData.append('folder', folder)
 
-      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+      const res = await fetch('/api/admin/instagram/upload', {
         method: 'POST',
         body: formData
       })
 
-      const data = await cloudRes.json()
+      const data = await res.json()
 
-      if (!cloudRes.ok || !data.secure_url) {
-        throw new Error(data.error?.message || 'Video upload to Cloudinary failed')
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to upload image')
       }
 
-      const videoUrl = data.secure_url
       setEditingPost(prev => ({
         ...prev,
-        video_url: videoUrl,
-        // If no thumbnail yet, try to derive one or use default
-        image_url: prev.image_url || videoUrl.replace(/\.[^/.]+$/, '.jpg')
+        image_url: data.url
       }))
-      toast.success('Video uploaded successfully!', 'Video Ready')
+
+      toast.success('Image uploaded to Supabase storage successfully!', 'Image Ready')
     } catch (err: any) {
-      console.error('Video upload error:', err)
-      toast.error(err.message || 'Failed to upload video.', 'Upload Error')
-    } finally {
-      setUploadingVideo(false)
-      if (videoInputRef.current) videoInputRef.current.value = ''
-    }
-  }
-
-  // Upload Thumbnail Image directly to Cloudinary
-  const handleThumbFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingThumb(true)
-    try {
-      const signRes = await fetch('/api/cloudinary/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder: 'instagram_thumbs' })
-      })
-
-      if (!signRes.ok) {
-        const signData = await signRes.json().catch(() => ({}))
-        throw new Error(signData.error || 'Failed to get Cloudinary upload authorization')
-      }
-
-      const { signature, timestamp, apiKey, cloudName, folder } = await signRes.json()
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('api_key', apiKey)
-      formData.append('timestamp', timestamp.toString())
-      formData.append('signature', signature)
-      formData.append('folder', folder)
-
-      const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: 'POST',
-        body: formData
-      })
-
-      const data = await cloudRes.json()
-
-      if (!cloudRes.ok || !data.secure_url) {
-        throw new Error(data.error?.message || 'Thumbnail upload to Cloudinary failed')
-      }
-
-      setEditingPost(prev => ({ ...prev, image_url: data.secure_url }))
-      toast.success('Thumbnail uploaded successfully!', 'Image Ready')
-    } catch (err: any) {
-      console.error('Thumbnail upload error:', err)
+      console.error('Instagram image upload error:', err)
       toast.error(err.message || 'Failed to upload image.', 'Upload Error')
     } finally {
-      setUploadingThumb(false)
-      if (thumbInputRef.current) thumbInputRef.current.value = ''
+      setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!editingPost.video_url?.trim() && !editingPost.image_url?.trim()) {
-      toast.error('Please upload a video or provide a video URL.', 'Video Required')
+    if (!editingPost.image_url?.trim()) {
+      toast.error('Please upload an image or provide an image URL.', 'Image Required')
       return
     }
 
@@ -202,26 +138,28 @@ export default function AdminInstagramPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingPost.id,
-          video_url: editingPost.video_url?.trim() || null,
-          image_url: editingPost.image_url?.trim() || '/images/placeholder.jpg',
+          image_url: editingPost.image_url.trim(),
+          instagram_url: editingPost.instagram_url?.trim() || 'https://instagram.com/tots_clothingclub',
+          post_url: editingPost.instagram_url?.trim() || 'https://instagram.com/tots_clothingclub',
           caption: editingPost.caption?.trim() || '',
-          tag: editingPost.tag?.trim() || null,
-          post_url: editingPost.post_url?.trim() || 'https://instagram.com/tots_clothingclub',
           display_order: Number(editingPost.display_order) || 1,
           is_active: editingPost.is_active ?? true
         })
       })
+
       const result = await res.json()
-      if (!res.ok || result.error) throw new Error(result.error || 'Failed to save')
+      if (!res.ok || result.error) {
+        throw new Error(result.error || 'Failed to save Instagram post')
+      }
 
       toast.success(
-        editingPost.id ? 'Video updated successfully!' : 'Video added to Instagram section!',
+        editingPost.id ? 'Instagram post updated successfully!' : 'Instagram post added successfully!',
         'Saved'
       )
       setIsModalOpen(false)
       await loadPosts()
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save Instagram video.', 'Error')
+      toast.error(err.message || 'Failed to save Instagram post.', 'Error')
     } finally {
       setSaving(false)
     }
@@ -229,175 +167,258 @@ export default function AdminInstagramPage() {
 
   const handleDelete = async (id: string, label?: string) => {
     const ok = await confirm({
-      title: 'Delete Instagram Video?',
-      message: 'Remove this reel/video from the "Latest from our Instagram" storefront section?',
-      itemName: label || 'Instagram Reel',
-      confirmText: 'Delete Video',
+      title: 'Delete Instagram Post?',
+      message: 'Are you sure you want to remove this image post from the "Latest from our Instagram" storefront section?',
+      itemName: label || 'Instagram Post',
+      confirmText: 'Delete Post',
       variant: 'danger'
     })
     if (!ok) return
 
     try {
-      await fetch(`/api/admin/instagram?id=${id}`, { method: 'DELETE' })
-      toast.success('Video removed from storefront.', 'Deleted')
+      const res = await fetch(`/api/admin/instagram?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      toast.success('Instagram post removed from storefront.', 'Deleted')
     } catch {
-      toast.error('Failed to delete.', 'Error')
+      toast.error('Failed to delete post.', 'Error')
     } finally {
       await loadPosts()
     }
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 max-w-7xl mx-auto">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <div className="p-2.5 bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white rounded-xl shadow-sm">
-            <Instagram size={22} />
+            <Instagram size={24} />
           </div>
           <div>
-            <h1 className="font-serif text-3xl font-normal text-charcoal">Instagram Reels & Videos</h1>
-            <p className="text-xs text-mid mt-0.5">
-              Upload and manage video reels for the storefront &ldquo;Latest from our Instagram&rdquo; section.
+            <h1 className="font-serif text-2xl sm:text-3xl font-normal text-charcoal">Instagram Images & Posts</h1>
+            <p className="text-xs text-mid mt-0.5 max-w-2xl">
+              Upload images for your storefront&apos;s &ldquo;Latest from our Instagram&rdquo; section and connect each image to its Instagram post or Reel.
             </p>
           </div>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 bg-charcoal text-cream text-xs font-semibold uppercase tracking-widest px-4 py-2.5 rounded-lg hover:bg-wine transition-all shadow-sm"
+          className="inline-flex items-center justify-center gap-2 bg-charcoal text-cream text-xs font-semibold uppercase tracking-widest px-4 py-2.5 rounded-lg hover:bg-wine transition-all shadow-sm shrink-0"
         >
           <PlusCircle size={15} />
-          <span>Upload Video / Reel</span>
+          <span>+ Add Instagram Post</span>
         </button>
       </div>
 
-      {/* ── Video Upload Banner ── */}
+      {/* ── Information Banner ── */}
       <div className="bg-[#faf7f2] border border-[#e8dfd2] rounded-xl p-4 flex gap-3 items-start text-xs">
-        <Film size={18} className="text-purple-600 shrink-0 mt-0.5" />
+        <ImageIcon size={18} className="text-rose-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-bold text-charcoal">Direct Video Uploads (No Instagram API / Access Token required):</p>
+          <p className="font-bold text-charcoal">Image Posts Management:</p>
           <p className="text-mid leading-relaxed">
-            Upload your MP4 / WebM video files directly here. They will play smoothly in a 9:16 Instagram-style reel card on your website with instant playback, volume controls, and a direct &ldquo;Follow on Instagram&rdquo; button.
+            Upload high quality JPG, PNG, or WebP images in 4:5 portrait format. When customers click on any image on the storefront, it opens the associated Instagram post or Reel in a new tab.
           </p>
         </div>
       </div>
 
-      {/* ── Grid of Videos ── */}
+      {/* ── Posts Listing / Grid ── */}
       {loading && posts.length === 0 ? (
         <div className="bg-white p-12 rounded-xl border border-border text-center text-xs text-mid flex items-center justify-center gap-2">
-          <Loader2 size={16} className="animate-spin" /> Loading videos…
+          <Loader2 size={16} className="animate-spin" /> Loading Instagram posts…
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-white p-12 rounded-xl border border-border text-center space-y-3">
-          <Film size={36} className="mx-auto text-gray-300" />
-          <h3 className="font-serif text-lg text-charcoal font-semibold">No Videos Uploaded Yet</h3>
+          <ImageIcon size={40} className="mx-auto text-gray-300" />
+          <h3 className="font-serif text-lg text-charcoal font-semibold">No Instagram Posts Added Yet</h3>
           <p className="text-xs text-mid max-w-md mx-auto">
-            Upload your first 9:16 reel video to feature it on the storefront homepage.
+            Upload your first Instagram image and attach its Instagram post or Reel link to display it on your storefront homepage.
           </p>
-          <button onClick={handleOpenAdd} className="inline-flex items-center gap-2 bg-wine text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg hover:bg-wine-dark transition-colors">
-            <PlusCircle size={14} /> Upload First Video
+          <button
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-2 bg-charcoal text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg hover:bg-wine transition-colors"
+          >
+            <PlusCircle size={14} /> Add First Post
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {posts.map(post => {
-            const hasVideo = !!post.video_url
-            return (
-              <div key={post.id} className="bg-white rounded-xl border border-border shadow-xs overflow-hidden group flex flex-col">
-                {/* 9:16 Preview Card */}
-                <div className="relative aspect-[9/16] bg-black overflow-hidden">
-                  {hasVideo ? (
-                    <video
-                      src={post.video_url}
-                      poster={post.image_url}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      muted
-                      playsInline
-                      loop
-                      onMouseEnter={e => (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
-                      onMouseLeave={e => {
-                        const v = e.currentTarget as HTMLVideoElement
-                        v.pause()
-                        v.currentTime = 0
-                      }}
-                    />
-                  ) : (
+        <div className="space-y-6">
+          {/* Grid View */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {posts.map(post => {
+              const url = post.instagram_url || post.post_url || 'https://instagram.com/tots_clothingclub'
+              return (
+                <div key={post.id} className="bg-white rounded-xl border border-border shadow-xs overflow-hidden group flex flex-col justify-between">
+                  {/* 4:5 Aspect Ratio Image Card */}
+                  <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden">
                     <img
-                      src={post.image_url || '/images/placeholder.jpg'}
-                      alt={post.caption || 'Reel'}
+                      src={post.image_url}
+                      alt={post.caption || 'Instagram Post'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                  )}
 
-                  {/* Gradient overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
 
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-                    {post.tag && (
-                      <span className="bg-amber-400 text-charcoal font-black text-[9px] px-2 py-0.5 rounded shadow-xs">
-                        {post.tag}
+                    {/* Status Badge */}
+                    <div className="absolute top-2.5 right-2.5 z-10">
+                      {post.is_active ? (
+                        <span className="bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1">
+                          <Eye size={10} /> Active
+                        </span>
+                      ) : (
+                        <span className="bg-gray-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1">
+                          <EyeOff size={10} /> Inactive
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Display Order Badge */}
+                    <div className="absolute top-2.5 left-2.5 z-10">
+                      <span className="bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs">
+                        #{post.display_order}
                       </span>
-                    )}
-                    {hasVideo && (
-                      <span className="bg-purple-600 text-white font-bold text-[8px] px-1.5 py-0.5 rounded shadow-xs flex items-center gap-0.5">
-                        <Film size={8} /> Video
-                      </span>
+                    </div>
+
+                    {/* Center Instagram Icon */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-xs text-purple-700 flex items-center justify-center shadow-lg">
+                        <Instagram size={18} />
+                      </div>
+                    </div>
+
+                    {/* Caption at Bottom */}
+                    {post.caption && (
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 pointer-events-none">
+                        <p className="text-[10px] text-white line-clamp-2 leading-tight font-medium drop-shadow-sm">
+                          {post.caption}
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  {/* Status */}
-                  <div className="absolute top-2 right-2 z-10">
-                    {post.is_active ? (
-                      <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Live</span>
-                    ) : (
-                      <span className="bg-gray-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Hidden</span>
-                    )}
-                  </div>
+                  {/* Card Footer Details & Actions */}
+                  <div className="p-3 space-y-2 text-xs bg-white flex-1 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-purple-700 hover:text-purple-900 font-medium truncate flex items-center gap-1 hover:underline"
+                        title={url}
+                      >
+                        <ExternalLink size={11} className="shrink-0" />
+                        <span className="truncate">{url.replace(/^https?:\/\/(www\.)?instagram\.com\//, '') || 'instagram.com'}</span>
+                      </a>
+                    </div>
 
-                  {/* Center Play Icon */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-xs text-charcoal flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                      <Play size={16} fill="currentColor" className="ml-0.5" />
+                    <div className="flex items-center justify-between pt-2 border-t border-border text-mid text-xs">
+                      <span className="text-[10px]">Order: <strong>{post.display_order}</strong></span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(post)}
+                          className="text-charcoal hover:text-purple-700 p-1 rounded hover:bg-gray-100 transition-colors"
+                          title="Edit Post"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(post.id, post.caption || `Post #${post.display_order}`)}
+                          className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition-colors"
+                          title="Delete Post"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Bottom Handle & Caption */}
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 pointer-events-none">
-                    <p className="text-[10px] font-bold text-white tracking-wide truncate">
-                      @{post.author_name || 'tots_clothingclub'}
-                    </p>
-                    {post.caption && (
-                      <p className="text-[9px] text-white/80 line-clamp-2 mt-0.5 leading-tight">
-                        {post.caption}
-                      </p>
-                    )}
-                  </div>
                 </div>
+              )
+            })}
+          </div>
 
-                {/* Footer Controls */}
-                <div className="p-2.5 space-y-2 text-xs bg-white border-t border-border flex-1 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-[10px] text-mid">
-                    <span>Order #{post.display_order}</span>
-                    {post.post_url && (
-                      <a href={post.post_url} target="_blank" rel="noreferrer" className="text-purple-600 hover:underline flex items-center gap-0.5 font-semibold">
-                        <ExternalLink size={9} /> Link
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-border">
-                    <button onClick={() => handleOpenEdit(post)} className="text-xs text-charcoal font-semibold hover:text-purple-700 flex items-center gap-1">
-                      <Pencil size={11} /> Edit
-                    </button>
-                    <button onClick={() => handleDelete(post.id, post.caption || post.tag || 'Video')} className="text-xs text-rose-600 font-semibold hover:text-rose-800 flex items-center gap-1">
-                      <Trash2 size={11} /> Del
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {/* Table Summary View */}
+          <div className="bg-white rounded-xl border border-border shadow-xs overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-[#faf7f2] flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal flex items-center gap-2">
+                <Layers size={14} /> Existing Instagram Posts ({posts.length})
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50/50 text-[10px] text-mid uppercase font-semibold">
+                    <th className="py-3 px-4">Image</th>
+                    <th className="py-3 px-4">Instagram URL</th>
+                    <th className="py-3 px-4">Caption</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Order</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {posts.map(post => {
+                    const url = post.instagram_url || post.post_url || 'https://instagram.com/tots_clothingclub'
+                    return (
+                      <tr key={post.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-2.5 px-4">
+                          <div className="w-12 h-15 rounded-md overflow-hidden bg-gray-100 border border-border aspect-[4/5]">
+                            <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 font-mono text-[11px]">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-700 hover:underline flex items-center gap-1 max-w-[240px] truncate"
+                          >
+                            <ExternalLink size={11} className="shrink-0" />
+                            <span className="truncate">{url}</span>
+                          </a>
+                        </td>
+                        <td className="py-2.5 px-4 text-charcoal max-w-[200px] truncate">
+                          {post.caption || <span className="text-gray-400 italic">None</span>}
+                        </td>
+                        <td className="py-2.5 px-4 text-center">
+                          {post.is_active ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-800">
+                              Inactive
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 text-center font-bold text-charcoal">
+                          {post.display_order}
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(post)}
+                              className="p-1.5 text-charcoal hover:text-purple-700 rounded-md hover:bg-gray-100 transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(post.id, post.caption || `Post #${post.display_order}`)}
+                              className="p-1.5 text-rose-600 hover:text-rose-800 rounded-md hover:bg-rose-50 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -407,159 +428,128 @@ export default function AdminInstagramPage() {
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-border animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Film size={20} className="text-purple-600" />
+                <Instagram size={20} className="text-purple-600" />
                 <h3 className="font-serif text-lg font-bold text-charcoal">
-                  {editingPost.id ? 'Edit Instagram Video' : 'Upload Instagram Reel Video'}
+                  {editingPost.id ? 'Edit Instagram Post' : 'Add Instagram Post'}
                 </h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 text-gray-400 hover:text-charcoal rounded-lg">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 text-gray-400 hover:text-charcoal rounded-lg transition-colors"
+              >
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 pt-4 text-xs">
-
-              {/* 1. Video Upload Field */}
+              {/* 1. Image Upload Field */}
               <div className="space-y-2">
                 <label className="font-bold text-charcoal flex items-center justify-between">
-                  <span>Video File (.mp4, .webm, .mov) <span className="text-rose-500">*</span></span>
-                  {editingPost.video_url && (
+                  <span>Instagram Image (JPG, PNG, WebP) <span className="text-rose-500">*</span></span>
+                  {editingPost.image_url && (
                     <span className="text-emerald-600 flex items-center gap-1 text-[10px] font-semibold">
-                      <CheckCircle2 size={11} /> Video Loaded
+                      <CheckCircle2 size={11} /> Image Selected
                     </span>
                   )}
                 </label>
 
-                {/* Upload Button */}
+                {/* Hidden File Input */}
                 <input
-                  ref={videoInputRef}
+                  ref={imageInputRef}
                   type="file"
-                  accept="video/mp4,video/webm,video/quicktime,video/*"
-                  onChange={handleVideoFileChange}
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  onChange={handleImageFileChange}
                   className="hidden"
                 />
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={uploadingVideo}
-                    onClick={() => videoInputRef.current?.click()}
-                    className="flex-1 py-3 px-4 rounded-xl border-2 border-dashed border-purple-300 hover:border-purple-600 bg-purple-50/50 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 font-semibold text-purple-900"
-                  >
-                    {uploadingVideo ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin text-purple-600" />
-                        <span>Uploading Video file to Cloudinary…</span>
-                      </>
-                    ) : (
-                      <>
-                        <UploadCloud size={16} className="text-purple-600" />
-                        <span>Choose Video File from Computer</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Direct Video URL Input */}
-                <div className="space-y-1">
-                  <span className="text-[10px] text-mid font-medium">Or paste direct Video URL:</span>
-                  <input
-                    type="url"
-                    value={editingPost.video_url || ''}
-                    onChange={e => setEditingPost(prev => ({ ...prev, video_url: e.target.value }))}
-                    placeholder="https://res.cloudinary.com/.../video.mp4"
-                    className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 text-xs bg-[#faf7f2] focus:bg-white"
-                  />
-                </div>
-
-                {/* Video Live Preview */}
-                {editingPost.video_url && (
-                  <div className="relative aspect-[9/16] max-h-48 w-auto mx-auto rounded-lg overflow-hidden bg-black border border-border shadow-xs">
-                    <video
-                      src={editingPost.video_url}
-                      className="w-full h-full object-cover"
-                      controls
-                      playsInline
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* 2. Optional Thumbnail Cover Image */}
-              <div className="space-y-2 pt-2 border-t border-border">
-                <label className="font-semibold text-charcoal flex items-center justify-between">
-                  <span>Cover / Thumbnail Image (Optional)</span>
-                  {editingPost.image_url && editingPost.image_url !== '/images/placeholder.jpg' && (
-                    <span className="text-emerald-600 text-[10px] font-semibold">Custom Cover Set</span>
+                {/* Upload Action Button */}
+                <button
+                  type="button"
+                  disabled={uploadingImage}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full py-3.5 px-4 rounded-xl border-2 border-dashed border-purple-300 hover:border-purple-600 bg-purple-50/50 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 font-semibold text-purple-900"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-purple-600" />
+                      <span>Uploading Image to Supabase Storage…</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={17} className="text-purple-600" />
+                      <span>{editingPost.image_url ? 'Replace Image from Device' : 'Upload Image from Device'}</span>
+                    </>
                   )}
-                </label>
+                </button>
 
-                <input
-                  ref={thumbInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleThumbFileChange}
-                  className="hidden"
-                />
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={uploadingThumb}
-                    onClick={() => thumbInputRef.current?.click()}
-                    className="py-2 px-3 rounded-lg border border-border hover:bg-beige text-charcoal font-medium text-xs flex items-center gap-1.5"
-                  >
-                    {uploadingThumb ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />}
-                    <span>Upload Cover Photo</span>
-                  </button>
+                {/* Direct Image URL Input */}
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] text-mid font-medium">Or paste image URL directly:</span>
                   <input
                     type="url"
                     value={editingPost.image_url || ''}
                     onChange={e => setEditingPost(prev => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="Cover photo URL (auto-generated if empty)"
-                    className="flex-1 py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 text-xs"
+                    placeholder="https://..."
+                    className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 text-xs bg-[#faf7f2] focus:bg-white"
                   />
                 </div>
+
+                {/* Image Live Preview */}
+                {editingPost.image_url && (
+                  <div className="pt-2 flex items-center gap-3">
+                    <div className="relative w-20 aspect-[4/5] rounded-lg overflow-hidden bg-gray-100 border border-border shadow-xs">
+                      <img
+                        src={editingPost.image_url}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-[11px] text-mid">
+                      <p className="font-semibold text-charcoal">Preview (4:5 Aspect Ratio)</p>
+                      <p className="text-[10px] text-gray-500">Image ready for storefront display</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* 3. Caption / Title */}
-              <div className="space-y-1 pt-1">
-                <label className="font-semibold text-charcoal">Post Caption / Title</label>
+              {/* 2. Instagram URL Field */}
+              <div className="space-y-1 pt-2 border-t border-border">
+                <label className="font-bold text-charcoal flex items-center justify-between">
+                  <span>Instagram Post / Reel URL <span className="text-rose-500">*</span></span>
+                  <span className="text-[10px] text-mid font-normal">Opens in new tab on click</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <LinkIcon size={13} />
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    value={editingPost.instagram_url || ''}
+                    onChange={e => setEditingPost(prev => ({ ...prev, instagram_url: e.target.value }))}
+                    placeholder="https://www.instagram.com/p/XXXXXXXX/ or /reel/XXXXXXXX/"
+                    className="w-full py-2.5 pl-9 pr-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 text-xs"
+                  />
+                </div>
+                <p className="text-[10px] text-mid">
+                  Example: <code className="text-purple-700">https://www.instagram.com/p/C3x9abc123/</code> or <code className="text-purple-700">https://www.instagram.com/reel/C3x9abc123/</code>
+                </p>
+              </div>
+
+              {/* 3. Optional Caption */}
+              <div className="space-y-1">
+                <label className="font-semibold text-charcoal">Caption (Optional)</label>
                 <textarea
                   rows={2}
                   value={editingPost.caption || ''}
                   onChange={e => setEditingPost(prev => ({ ...prev, caption: e.target.value }))}
-                  placeholder="e.g. Behind the scenes at our festive photoshoot..."
+                  placeholder="e.g. Modern festive silhouettes crafted with love..."
                   className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 text-xs"
                 />
               </div>
 
-              {/* 4. Price Badge & Instagram URL */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-semibold text-charcoal">Price Badge / Tag</label>
-                  <input
-                    type="text"
-                    value={editingPost.tag || ''}
-                    onChange={e => setEditingPost(prev => ({ ...prev, tag: e.target.value }))}
-                    placeholder="e.g. FLAT 50% OFF"
-                    className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-semibold text-charcoal">Instagram Post / Profile URL</label>
-                  <input
-                    type="url"
-                    value={editingPost.post_url || ''}
-                    onChange={e => setEditingPost(prev => ({ ...prev, post_url: e.target.value }))}
-                    placeholder="https://instagram.com/reel/..."
-                    className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600"
-                  />
-                </div>
-              </div>
-
-              {/* 5. Display Order & Visibility */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* 4. Display Order & Status */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">
                   <label className="font-semibold text-charcoal">Display Order</label>
                   <input
@@ -571,19 +561,20 @@ export default function AdminInstagramPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-semibold text-charcoal">Visibility</label>
+                  <label className="font-semibold text-charcoal">Status</label>
                   <select
                     value={editingPost.is_active ? 'true' : 'false'}
                     onChange={e => setEditingPost(prev => ({ ...prev, is_active: e.target.value === 'true' }))}
                     className="w-full py-2 px-3 rounded-lg border border-border focus:outline-none focus:border-purple-600 bg-white"
                   >
                     <option value="true">Active (Visible)</option>
-                    <option value="false">Hidden (Draft)</option>
+                    <option value="false">Inactive (Hidden)</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -593,20 +584,19 @@ export default function AdminInstagramPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || uploadingVideo || uploadingThumb}
+                  disabled={saving || uploadingImage}
                   className="bg-charcoal text-cream font-semibold px-5 py-2 rounded-lg hover:bg-wine transition-all disabled:opacity-50 text-xs flex items-center gap-2"
                 >
                   {saving ? (
                     <>
                       <Loader2 size={13} className="animate-spin" />
-                      <span>Saving Video…</span>
+                      <span>Saving Post…</span>
                     </>
                   ) : (
-                    'Save Instagram Reel'
+                    'Save Instagram Post'
                   )}
                 </button>
               </div>
-
             </form>
           </div>
         </div>
