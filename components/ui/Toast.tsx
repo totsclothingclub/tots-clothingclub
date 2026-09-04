@@ -53,8 +53,11 @@ export const toast = {
   },
 }
 
+import { createPortal } from 'react-dom'
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
+  const [mounted, setMounted] = useState(false)
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id))
@@ -67,6 +70,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    setMounted(true)
     const listener: ToastListener = (item) => addToast(item)
     listeners.add(listener)
     return () => {
@@ -89,15 +93,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={contextValue}>
       {children}
 
-      {/* Floating Toast Viewport */}
-      <div
-        aria-live="polite"
-        className="fixed top-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
-      >
-        {toasts.map(t => (
-          <ToastCard key={t.id} item={t} onDismiss={() => removeToast(t.id)} />
-        ))}
-      </div>
+      {/* Floating Toast Viewport - only mounted on client via portal to prevent SSR hydration mismatch */}
+      {mounted && typeof document !== 'undefined' && createPortal(
+        <div
+          aria-live="polite"
+          className="fixed top-5 right-5 z-[999999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+        >
+          {toasts.map(t => (
+            <ToastCard key={t.id} item={t} onDismiss={() => removeToast(t.id)} />
+          ))}
+        </div>,
+        document.body
+      )}
     </ToastContext.Provider>
   )
 }
