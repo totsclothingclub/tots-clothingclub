@@ -69,8 +69,14 @@ h3, h4, h5, h6, p, span, a, button, input, label {
   to   { transform: translateX(0); }
 }
 
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 .animate-fadeup        { animation: fadeUp 0.4s ease forwards; }
-.animate-fadein        { animation: fadeIn 0.3s ease forwards; }
+.animate-fadein        { animation: fadeIn 0.25s ease forwards; }
+.animate-slideup       { animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-slidein-left  { animation: slideInLeft 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-slidein-right { animation: slideInRight 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-slidein       { animation: slideInLeft 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
