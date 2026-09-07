@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createOrder, getOrderByRazorpayOrderId, markOrderAsPaid, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
+import {
+  createOrder,
+  getOrderByRazorpayOrderId,
+  markOrderAsPaid,
+  getStoreSettings,
+  calculateShippingFee,
+  isValidUUID,
+  reduceProductStock
+} from '@/lib/supabase/data-service'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -81,6 +89,28 @@ export async function POST(req: Request) {
         })
         finalOrderNumber = updated?.order_number || existingOrder.order_number
         finalOrderId = updated?.id || existingOrder.id
+      }
+
+      // If existing order had no items attached, ensure items are stored and stock reduced
+      if ((!existingOrder.items || existingOrder.items.length === 0) && items && items.length > 0) {
+        try {
+          const supabase = createAdminClient()
+          const itemRows = items.map((i: any) => ({
+            order_id: existingOrder.id,
+            product_id: isValidUUID(i.product?.id || i.product_id || i.id) ? (i.product?.id || i.product_id || i.id) : null,
+            variant_id: isValidUUID(i.variant?.id) ? i.variant.id : null,
+            product_name: i.product?.name || i.product_name || 'Product',
+            size: i.variant?.size || i.size || 'Standard',
+            color: i.variant?.color || i.color || 'Standard',
+            price: Number(i.product?.sale_price || i.product?.regular_price || i.price || 0),
+            quantity: Math.max(1, Number(i.quantity) || 1),
+            image_url: i.product?.primary_image || i.image_url || null,
+          }))
+          await supabase.from('order_items').insert(itemRows)
+          await reduceProductStock(itemRows as any)
+        } catch (err) {
+          console.warn('Failed to insert fallback items for existing order:', err)
+        }
       }
     } else {
       // Fallback: create order if not pre-created (verify prices from DB)
