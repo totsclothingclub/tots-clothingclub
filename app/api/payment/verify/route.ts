@@ -118,7 +118,9 @@ export async function POST(req: Request) {
       })
 
       const settings = await getStoreSettings()
-      const baseShippingFee = Number(settings?.standard_shipping_fee) || 80
+      const baseShippingFee = settings?.standard_shipping_fee !== undefined && settings?.standard_shipping_fee !== null
+        ? Number(settings.standard_shipping_fee)
+        : 80
       const totalQuantity = (items || []).reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0)
       const calculatedShippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
       const finalShippingFee = shippingFee !== undefined ? Number(shippingFee) : calculatedShippingFee
