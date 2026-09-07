@@ -83,7 +83,14 @@ export default async function CustomerOrdersPage() {
                 <div className="space-y-2">
                   {order.items?.map(item => (
                     <div key={item.id} className="flex gap-4 items-center">
-                      <img src={item.image_url || '/images/placeholder.jpg'} alt="" className="w-12 h-14 object-cover rounded-lg border border-tots-border" />
+                      <img
+                        src={item.image_url || '/images/placeholder.jpg'}
+                        alt={item.product_name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=300&auto=format&fit=crop&q=80'
+                        }}
+                        className="w-12 h-14 object-cover rounded-lg border border-tots-border bg-stone-100"
+                      />
                       <div className="flex-1 text-xs">
                         <h4 className="font-semibold text-tots-dark">{item.product_name}</h4>
                         <p className="text-tots-gray">Size: {item.size} • Color: {item.color} • Qty: {item.quantity}</p>
