@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { getStoreSettings, updateStoreSettings } from '@/lib/supabase/data-service'
 import { StoreSettings } from '@/lib/types'
+import { useToast } from '@/components/ui/Toast'
 import { Save, ShieldCheck, CheckCircle2, Store, Truck, CreditCard, Instagram, Globe } from 'lucide-react'
 
 export default function AdminSettingsPage() {
+  const { toast } = useToast()
   const [settings, setSettings] = useState<StoreSettings>({
     id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     store_name: 'TOTS',
@@ -18,7 +20,6 @@ export default function AdminSettingsPage() {
     instagram_handle: '@tots_clothingclub'
   })
 
-  const [savedMsg, setSavedMsg] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -28,10 +29,14 @@ export default function AdminSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    await updateStoreSettings(settings)
-    setSaving(false)
-    setSavedMsg('Store configuration saved successfully!')
-    setTimeout(() => setSavedMsg(''), 3500)
+    try {
+      await updateStoreSettings(settings)
+      toast.success('Store configuration saved successfully!', 'Settings Saved')
+    } catch (err: any) {
+      toast.error('Failed to save store settings. Please try again.', 'Error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -54,13 +59,6 @@ export default function AdminSettingsPage() {
           <span>{saving ? 'Saving...' : 'Save Settings'}</span>
         </button>
       </div>
-
-      {savedMsg && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center gap-2 animate-fadein">
-          <CheckCircle2 size={16} />
-          <span>{savedMsg}</span>
-        </div>
-      )}
 
       {/* 1. Brand Identity & Contact */}
       <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-4">
@@ -119,18 +117,7 @@ export default function AdminSettingsPage() {
           <h3 className="font-serif text-lg font-semibold text-charcoal">Shipping & Fulfillment Rates</h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className="font-semibold block mb-1 text-charcoal">Free Shipping Threshold (₹)</label>
-            <input
-              type="number"
-              value={settings.free_shipping_threshold}
-              onChange={e => setSettings(prev => ({ ...prev, free_shipping_threshold: Number(e.target.value) }))}
-              className="w-full text-xs p-2.5 rounded-lg border border-border bg-[#faf7f2] focus:bg-white focus:outline-none focus:border-gold"
-            />
-            <p className="text-[11px] text-mid mt-1">Orders at or above this value qualify for free domestic express shipping.</p>
-          </div>
-
+        <div className="max-w-md text-xs">
           <div>
             <label className="font-semibold block mb-1 text-charcoal">Standard Shipping Fee (₹)</label>
             <input
@@ -139,7 +126,9 @@ export default function AdminSettingsPage() {
               onChange={e => setSettings(prev => ({ ...prev, standard_shipping_fee: Number(e.target.value) }))}
               className="w-full text-xs p-2.5 rounded-lg border border-border bg-[#faf7f2] focus:bg-white focus:outline-none focus:border-gold"
             />
-            <p className="text-[11px] text-mid mt-1">Flat shipping charge applied for orders below threshold.</p>
+            <p className="text-[11px] text-mid mt-1">
+              Base shipping fee applied for 1–2 items. For every additional 2 items (3–4, 5–6, etc.), shipping scales automatically (2x, 3x, etc.).
+            </p>
           </div>
         </div>
       </div>
@@ -152,16 +141,6 @@ export default function AdminSettingsPage() {
         </div>
 
         <div className="space-y-3 text-xs">
-          <div className="p-3.5 bg-[#faf7f2] rounded-lg border border-border flex items-center justify-between">
-            <div className="space-y-0.5">
-              <span className="font-semibold text-charcoal block">Cash on Delivery (COD)</span>
-              <span className="text-mid text-[11px]">Allow customers to pay upon parcel receipt</span>
-            </div>
-            <span className="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-[10px]">
-              ENABLED
-            </span>
-          </div>
-
           <div className="p-3.5 bg-[#faf7f2] rounded-lg border border-border flex items-center justify-between">
             <div className="space-y-0.5">
               <span className="font-semibold text-charcoal block">UPI & Razorpay / Stripe Card Checkout</span>
