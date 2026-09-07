@@ -40,8 +40,8 @@ export const CartDrawer: React.FC = () => {
     if (isDrawerOpen) {
       getActiveCoupons().then(list => setActiveCoupons(list || []))
       getStoreSettings().then(s => {
-        if (s && s.standard_shipping_fee !== undefined) {
-          setBaseShippingFee(Number(s.standard_shipping_fee) || 80)
+        if (s && s.standard_shipping_fee !== undefined && s.standard_shipping_fee !== null) {
+          setBaseShippingFee(Number(s.standard_shipping_fee))
         }
       })
     }
