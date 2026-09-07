@@ -8,7 +8,7 @@ import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { useCart } from '@/lib/context/CartContext'
 import { useAuth } from '@/lib/context/AuthContext'
 import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck, AlertCircle, MapPin, Building2, Home as HomeIcon } from 'lucide-react'
-import { validateCoupon, getActiveCoupons } from '@/lib/supabase/data-service'
+import { validateCoupon, getActiveCoupons, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
 import { Coupon } from '@/lib/types'
 
 // Helper function to load Razorpay Standard Web Checkout script dynamically
@@ -83,17 +83,23 @@ export default function CheckoutPage() {
   const paymentMethod = 'Razorpay'
   const [inputCoupon, setInputCoupon] = useState('')
   const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([])
+  const [baseShippingFee, setBaseShippingFee] = useState<number>(80)
   const [isProcessing, setIsProcessing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [completedOrder, setCompletedOrder] = useState<any>(null)
 
-  const shippingFee = 80
-  const tax = Math.round((subtotal - discount) * 0.05)
-  const grandTotal = Math.max(0, subtotal - discount + shippingFee + tax)
+  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)
+  const shippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
+  const grandTotal = Math.max(0, subtotal - discount + shippingFee)
 
   useEffect(() => {
     loadRazorpayScript()
     getActiveCoupons().then(list => setActiveCoupons(list || []))
+    getStoreSettings().then(s => {
+      if (s && s.standard_shipping_fee !== undefined) {
+        setBaseShippingFee(Number(s.standard_shipping_fee) || 80)
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -179,7 +185,7 @@ export default function CheckoutPage() {
                 subtotal,
                 discount,
                 shippingFee,
-                tax,
+                tax: 0,
                 total: grandTotal,
                 paymentMethod,
               }),
@@ -575,10 +581,6 @@ export default function CheckoutPage() {
               <div className="flex justify-between">
                 <span>Shipping Fee</span>
                 <span className="font-semibold text-tots-dark">₹{shippingFee}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>GST Tax (5%)</span>
-                <span className="font-semibold text-tots-dark">₹{tax}</span>
               </div>
               <div className="flex justify-between text-base font-bold text-tots-dark pt-3 border-t border-tots-border">
                 <span>Grand Total</span>

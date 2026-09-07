@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createOrder, getOrderByRazorpayOrderId, markOrderAsPaid } from '@/lib/supabase/data-service'
+import { createOrder, getOrderByRazorpayOrderId, markOrderAsPaid, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -117,8 +117,14 @@ export async function POST(req: Request) {
         }
       })
 
+      const settings = await getStoreSettings()
+      const baseShippingFee = Number(settings?.standard_shipping_fee) || 80
+      const totalQuantity = (items || []).reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0)
+      const calculatedShippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
+      const finalShippingFee = shippingFee !== undefined ? Number(shippingFee) : calculatedShippingFee
+
       const finalSubtotal = subtotal || calculatedSubtotal
-      const finalTotal = total || Math.max(0, finalSubtotal - (discount || 0) + (shippingFee || 80) + (tax || 0))
+      const finalTotal = total || Math.max(0, finalSubtotal - (discount || 0) + finalShippingFee)
 
       const created = await createOrder({
         customer_name: customerDetails?.full_name || 'Customer',
@@ -127,8 +133,8 @@ export async function POST(req: Request) {
         shipping_address: customerDetails,
         subtotal: finalSubtotal,
         discount: discount || 0,
-        shipping_fee: shippingFee || 80,
-        tax: tax || 0,
+        shipping_fee: finalShippingFee,
+        tax: 0,
         total: finalTotal,
         order_status: 'Processing',
         payment_status: 'Paid',

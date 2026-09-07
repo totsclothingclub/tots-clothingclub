@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
-import { validateCoupon, createOrder, getProductById } from '@/lib/supabase/data-service'
+import { validateCoupon, createOrder, getProductById, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
@@ -101,8 +101,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const shippingFee = 80
-    const tax = Math.round((subtotal - discount) * 0.05) // 5% GST
+    const settings = await getStoreSettings()
+    const baseShippingFee = Number(settings?.standard_shipping_fee) || 80
+    const totalQuantity = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0)
+    const shippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
+    const tax = 0
     const total = Math.max(0, subtotal - discount + shippingFee + tax)
     const amountInPaise = Math.round(total * 100)
 

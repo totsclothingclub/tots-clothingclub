@@ -6,12 +6,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   ShoppingBag,
-  PlusCircle,
   FolderTree,
   Image as ImageIcon,
   PackageCheck,
   Ticket,
-  MessageSquare,
   Settings,
   Users,
   ExternalLink,
@@ -48,7 +46,6 @@ const navGroups: NavGroup[] = [
     title: 'STORE CATALOG',
     items: [
       { label: 'Products', href: '/admin/products', icon: ShoppingBag },
-      { label: 'Add Product', href: '/admin/products/editor', icon: PlusCircle },
       { label: 'Categories', href: '/admin/categories', icon: FolderTree }
     ]
   },
@@ -61,8 +58,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'CUSTOMERS',
     items: [
-      { label: 'Customers', href: '/admin/customers', icon: Users },
-      { label: 'Reviews', href: '/admin/reviews', icon: MessageSquare }
+      { label: 'Customers', href: '/admin/customers', icon: Users }
     ]
   },
   {
@@ -112,7 +108,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname.includes('/admin/categories')) return 'Categories'
     if (pathname.includes('/admin/orders')) return 'Orders'
     if (pathname.includes('/admin/customers')) return 'Customers'
-    if (pathname.includes('/admin/reviews')) return 'Reviews'
     if (pathname.includes('/admin/banners')) return 'Banners & Marketing'
     if (pathname.includes('/admin/promo-cards')) return 'Promotional Cards'
     if (pathname.includes('/admin/instagram')) return 'Instagram Images & Posts'

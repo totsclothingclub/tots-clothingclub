@@ -65,6 +65,12 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   return storeSettings
 }
 
+export function calculateShippingFee(totalQuantity: number, baseFee: number = 80): number {
+  if (totalQuantity <= 0) return 0
+  const multiplier = Math.ceil(totalQuantity / 2)
+  return multiplier * baseFee
+}
+
 export async function updateStoreSettings(newSettings: Partial<StoreSettings>): Promise<StoreSettings> {
   if (isSupabaseConfigured()) {
     try {
