@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/context/AuthContext'
 import { ShieldCheck, CheckCircle2, Lock, ArrowRight, Truck, AlertCircle, MapPin, Building2, Home as HomeIcon } from 'lucide-react'
 import { validateCoupon, getActiveCoupons } from '@/lib/supabase/data-service'
 import { Coupon } from '@/lib/types'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 // Helper function to load Razorpay Standard Web Checkout script dynamically
 function loadRazorpayScript(): Promise<boolean> {
@@ -339,10 +340,10 @@ export default function CheckoutPage() {
         )}
 
         <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column: Customer & Shipping Details */}
           <div className="lg:col-span-7 space-y-6">
-            
+
             {/* Contact Info Box */}
             <div className="bg-white p-6 rounded-2xl border border-tots-border shadow-xs space-y-4">
               <h2 className="font-serif text-xl font-bold text-tots-dark border-b border-tots-border pb-3">
@@ -424,11 +425,10 @@ export default function CheckoutPage() {
                               pincode: addr.pincode,
                             }))
                           }}
-                          className={`px-3 py-1.5 rounded-lg border text-left text-xs transition-all flex items-center gap-1.5 ${
-                            isSelected
+                          className={`px-3 py-1.5 rounded-lg border text-left text-xs transition-all flex items-center gap-1.5 ${isSelected
                               ? 'bg-wine text-white border-wine shadow-xs font-bold'
                               : 'bg-white text-charcoal border-border hover:border-gold font-medium'
-                          }`}
+                            }`}
                         >
                           <span>{addr.label === 'Office' ? '🏢' : '🏠'}</span>
                           <span>{addr.label || 'Address'}</span>
@@ -512,7 +512,7 @@ export default function CheckoutPage() {
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {items.map(item => (
                 <div key={item.id} className="flex gap-3 text-xs">
-                  <img src={item.product.primary_image} alt="" className="w-12 h-16 object-cover rounded-lg border border-tots-border" />
+                  <img src={getOptimizedImageUrl(item.product.primary_image, { width: 96, height: 128, crop: 'fill' })} alt="" className="w-12 h-16 object-cover rounded-lg border border-tots-border" />
                   <div className="flex-1">
                     <h4 className="font-semibold text-tots-dark line-clamp-1">{item.product.name}</h4>
                     <p className="text-tots-gray text-[11px]">Size: {item.variant.size} • Qty: {item.quantity}</p>

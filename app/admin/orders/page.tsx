@@ -19,6 +19,7 @@ import {
   CreditCard,
   Download
 } from 'lucide-react'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -69,7 +70,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-6 pb-16">
-      
+
       {/* ── Heading ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -93,11 +94,10 @@ export default function AdminOrdersPage() {
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
-            className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              statusFilter === tab.key
+            className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${statusFilter === tab.key
                 ? 'bg-charcoal text-cream shadow-xs'
                 : 'bg-white text-mid border border-border hover:text-charcoal'
-            }`}
+              }`}
           >
             <span>{tab.label}</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${statusFilter === tab.key ? 'bg-gold text-charcoal' : 'bg-beige text-mid'}`}>
@@ -194,9 +194,8 @@ export default function AdminOrdersPage() {
                       <select
                         value={order.order_status}
                         onChange={e => handleStatusChange(order.id, e.target.value as any)}
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full border outline-none cursor-pointer ${
-                          statusColors[order.order_status] || 'bg-gray-100'
-                        }`}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full border outline-none cursor-pointer ${statusColors[order.order_status] || 'bg-gray-100'
+                          }`}
                         aria-label="Update Order Status"
                       >
                         <option value="Pending">Pending</option>
@@ -231,7 +230,7 @@ export default function AdminOrdersPage() {
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadein">
           <div className="bg-white rounded-2xl border border-border shadow-panel max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fadeup">
-            
+
             {/* Modal Header */}
             <div className="p-6 border-b border-border flex items-center justify-between bg-[#faf7f2]">
               <div>
@@ -255,7 +254,7 @@ export default function AdminOrdersPage() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
-              
+
               {/* Customer & Shipping Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#f8f6f0] rounded-xl border border-border">
                 <div className="space-y-1">
@@ -292,7 +291,7 @@ export default function AdminOrdersPage() {
                       <div key={idx} className="flex items-center justify-between p-3 bg-white border border-border rounded-lg">
                         <div className="flex items-center gap-3">
                           {item.image_url && (
-                            <img src={item.image_url} alt="" className="w-10 h-12 object-cover rounded" />
+                            <img src={getOptimizedImageUrl(item.image_url, { width: 80, height: 96, crop: 'fill' })} alt="" className="w-10 h-12 object-cover rounded" />
                           )}
                           <div>
                             <p className="font-semibold text-charcoal">{item.product_name}</p>

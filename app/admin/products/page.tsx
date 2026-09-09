@@ -22,6 +22,7 @@ import {
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
 import { useRouter } from 'next/navigation'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export default function AdminProductsPage() {
   const router = useRouter()
@@ -116,12 +117,12 @@ export default function AdminProductsPage() {
 
   const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())
-    const matchCategory = selectedCategory === 'all' || 
-      p.category_id === selectedCategory || 
+    const matchCategory = selectedCategory === 'all' ||
+      p.category_id === selectedCategory ||
       p.category?.slug === selectedCategory ||
       (p as any).category_ids?.includes(selectedCategory)
     const matchStatus = selectedStatus === 'all' || p.status === selectedStatus
-    
+
     const stock = getProductStock(p)
     const matchStock = selectedStock === 'all' ||
       (selectedStock === 'in_stock' && stock > 5) ||
@@ -133,7 +134,7 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      
+
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -251,11 +252,12 @@ export default function AdminProductsPage() {
                       {/* Image */}
                       <td className="p-4">
                         <img
-                          src={
+                          src={getOptimizedImageUrl(
                             (p.primary_image && p.primary_image !== '/images/placeholder.jpg')
                               ? p.primary_image
-                              : p.images?.[0]?.image_url || '/images/placeholder.jpg'
-                          }
+                              : p.images?.[0]?.image_url || '/images/placeholder.jpg',
+                            { width: 96, height: 112, crop: 'fill' }
+                          )}
                           alt={p.name}
                           className="w-12 h-14 object-cover object-top rounded border border-border shadow-2xs"
                         />
@@ -345,13 +347,12 @@ export default function AdminProductsPage() {
                       {/* Status */}
                       <td className="p-4">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                            p.status === 'published'
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${p.status === 'published'
                               ? 'bg-emerald-100 text-emerald-800'
                               : p.status === 'draft'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {p.status || 'published'}
                         </span>

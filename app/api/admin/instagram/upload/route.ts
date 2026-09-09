@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
 import { uploadImageToCloudinary } from '@/lib/cloudinary'
 
 export const dynamic = 'force-dynamic'
@@ -31,71 +30,26 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Direct upload to Cloudinary only - no Supabase storage or base64 fallbacks
+    const cloudinaryResult = await uploadImageToCloudinary(buffer, 'instagram')
 
-    // 1. Try Supabase Storage upload
-    if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
-      try {
-        const supabase = createAdminClient()
-        const bucketName = 'instagram'
-        const ext = file.name.split('.').pop() || 'jpg'
-        const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-        const fileName = `${Date.now()}-${cleanName}`
-
-        // Try uploading to Supabase Storage bucket
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(fileName, buffer, {
-            contentType: file.type || 'image/jpeg',
-            upsert: true
-          })
-
-        if (!uploadError && uploadData) {
-          const { data: publicUrlData } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(fileName)
-
-          if (publicUrlData?.publicUrl) {
-            return NextResponse.json({
-              success: true,
-              url: publicUrlData.publicUrl,
-              storage: 'supabase'
-            })
-          }
-        } else if (uploadError) {
-          console.warn('Supabase storage upload error, trying fallback:', uploadError.message)
-        }
-      } catch (storageErr) {
-        console.warn('Supabase storage exception:', storageErr)
-      }
+    if (!cloudinaryResult?.secure_url) {
+      throw new Error('Cloudinary upload returned an empty URL')
     }
 
-    // 2. Fallback to Cloudinary or base64 if Supabase storage is unavailable
-    try {
-      const cloudinaryResult = await uploadImageToCloudinary(buffer, 'instagram')
-      if (cloudinaryResult?.secure_url) {
-        return NextResponse.json({
-          success: true,
-          url: cloudinaryResult.secure_url,
-          storage: 'cloudinary'
-        })
-      }
-    } catch (cErr) {
-      console.warn('Cloudinary upload fallback exception:', cErr)
-    }
-
-    // 3. Fallback to base64 Data URI if no remote storage is configured
-    const base64 = `data:${file.type || 'image/jpeg'};base64,${buffer.toString('base64')}`
     return NextResponse.json({
       success: true,
-      url: base64,
-      storage: 'base64'
+      url: cloudinaryResult.secure_url,
+      public_id: cloudinaryResult.public_id,
+      width: cloudinaryResult.width,
+      height: cloudinaryResult.height,
+      format: cloudinaryResult.format,
+      storage: 'cloudinary'
     })
   } catch (err: any) {
-    console.error('Instagram image upload error:', err)
+    console.error('Instagram Cloudinary upload error:', err)
     return NextResponse.json(
-      { error: err.message || 'Failed to upload image.' },
+      { error: err.message || 'Failed to upload image to Cloudinary.' },
       { status: 500 }
     )
   }

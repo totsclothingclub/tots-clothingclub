@@ -5,6 +5,7 @@ import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { getAllOrders } from '@/lib/supabase/data-service'
 import { Package, Truck, CheckCircle2, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export const revalidate = 0
 
@@ -83,7 +84,7 @@ export default async function CustomerOrdersPage() {
                 <div className="space-y-2">
                   {order.items?.map(item => (
                     <div key={item.id} className="flex gap-4 items-center">
-                      <img src={item.image_url || '/images/placeholder.jpg'} alt="" className="w-12 h-14 object-cover rounded-lg border border-tots-border" />
+                      <img src={getOptimizedImageUrl(item.image_url, { width: 96, height: 112, crop: 'fill' }) || '/images/placeholder.jpg'} alt="" className="w-12 h-14 object-cover rounded-lg border border-tots-border" />
                       <div className="flex-1 text-xs">
                         <h4 className="font-semibold text-tots-dark">{item.product_name}</h4>
                         <p className="text-tots-gray">Size: {item.size} • Color: {item.color} • Qty: {item.quantity}</p>

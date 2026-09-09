@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
 import { useToast } from '@/components/ui/Toast'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 const allSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
 
@@ -385,7 +386,7 @@ function ProductEditorContent() {
 
   return (
     <div className="space-y-6 max-w-5xl pb-20">
-      
+
       {/* ── Editor Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
@@ -439,11 +440,10 @@ function ProductEditorContent() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className={`text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-all whitespace-nowrap ${
-              activeTab === tab.key
+            className={`text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-all whitespace-nowrap ${activeTab === tab.key
                 ? 'bg-white text-charcoal border-t border-x border-border shadow-xs'
                 : 'text-mid hover:text-charcoal'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -582,11 +582,10 @@ function ProductEditorContent() {
                           return (
                             <span
                               key={id}
-                              className={`inline-flex items-center gap-1 border text-[11px] font-semibold px-2.5 py-1 rounded-md ${
-                                isPlus
+                              className={`inline-flex items-center gap-1 border text-[11px] font-semibold px-2.5 py-1 rounded-md ${isPlus
                                   ? 'bg-rose-50 border-rose-200 text-rose-900'
                                   : 'bg-amber-50 border-amber-200 text-amber-900'
-                              }`}
+                                }`}
                             >
                               <span>{isPlus ? 'Plus Size › ' : 'Shop › '}{cat.name}</span>
                               <button
@@ -610,7 +609,7 @@ function ProductEditorContent() {
                   {/* Dropdown with Checkbox Multi-Select */}
                   {categoryDropdownOpen && (
                     <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-white rounded-xl border border-border shadow-xl p-3 max-h-72 overflow-y-auto space-y-3">
-                      
+
                       {/* Plus Size Categories */}
                       {categories.some(c => c.nav_location === 'plus_size_dropdown' || c.parent_id === 'cat-plus-size') && (
                         <div className="space-y-1">
@@ -921,12 +920,11 @@ function ProductEditorContent() {
               return (
                 <div
                   key={index}
-                  className={`group relative aspect-[3/4] rounded-lg overflow-hidden border-2 transition-all ${
-                    isPrimary ? 'border-gold shadow-md' : 'border-border'
-                  }`}
+                  className={`group relative aspect-[3/4] rounded-lg overflow-hidden border-2 transition-all ${isPrimary ? 'border-gold shadow-md' : 'border-border'
+                    }`}
                 >
-                  <img src={url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover object-top" />
-                  
+                  <img src={getOptimizedImageUrl(url, { width: 300, height: 400, crop: 'fill' })} alt={`Preview ${index + 1}`} className="w-full h-full object-cover object-top" />
+
                   {isPrimary && (
                     <div className="absolute top-2 left-2 bg-gold text-charcoal text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow-xs">
                       Primary
@@ -961,7 +959,7 @@ function ProductEditorContent() {
       {/* ── Tab 4: Sizes & Attributes ── */}
       {activeTab === 'attributes' && (
         <div className="bg-white p-6 rounded-xl border border-border shadow-xs space-y-6">
-          
+
           {/* Size matrix */}
           <div className="space-y-3">
             <h3 className="font-serif text-lg font-semibold text-charcoal border-b border-border pb-2">
@@ -976,11 +974,10 @@ function ProductEditorContent() {
                     key={size}
                     type="button"
                     onClick={() => toggleSize(size)}
-                    className={`text-xs font-semibold px-4 py-2 rounded-lg border transition-all ${
-                      isSelected
+                    className={`text-xs font-semibold px-4 py-2 rounded-lg border transition-all ${isSelected
                         ? 'bg-charcoal text-cream border-charcoal shadow-xs'
                         : 'bg-white text-mid border-border hover:border-gold'
-                    }`}
+                      }`}
                   >
                     {size}
                   </button>
@@ -1067,7 +1064,7 @@ function ProductEditorContent() {
                       {col.image_url ? (
                         <div className="relative group">
                           <img
-                            src={col.image_url}
+                            src={getOptimizedImageUrl(col.image_url, { width: 80, height: 80, crop: 'fill' })}
                             alt=""
                             className="w-9 h-9 rounded-full object-cover border-2 border-gold shadow-2xs"
                           />

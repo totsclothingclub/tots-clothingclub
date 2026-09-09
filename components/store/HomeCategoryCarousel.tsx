@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { Category } from '@/lib/types'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 interface HomeCategoryCarouselProps {
   categories: Category[]
@@ -35,7 +36,7 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
 
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      
+
       {/* ── Section Title ── */}
       <div className="text-center space-y-1 lg:hidden">
         <h2 className="font-heading text-2xl font-bold tracking-wider text-charcoal uppercase">
@@ -72,8 +73,9 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
             {/* Right section: Category image */}
             <div className="w-[44%] flex-shrink-0 bg-transparent flex items-end justify-center relative overflow-hidden">
               <img
-                src={cat.image_url || '/images/placeholder.jpg'}
+                src={getOptimizedImageUrl(cat.image_url, { width: 600, crop: 'limit' }) || '/images/placeholder.jpg'}
                 alt={cat.name}
+                loading="lazy"
                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 bg-transparent"
                 onError={(e: any) => { e.target.src = '/images/placeholder.jpg' }}
               />
@@ -94,15 +96,15 @@ export default function HomeCategoryCarousel({ categories }: HomeCategoryCarouse
                 {/* Circular category portrait card */}
                 <div className="w-32 h-32 xs:w-36 xs:h-36 rounded-full overflow-hidden bg-white p-1 border-2 border-gold/40 group-hover:border-wine group-hover:scale-105 transition-all duration-300 shadow-md flex items-center justify-center">
                   <img
-                    src={cat.image_url || '/images/placeholder.jpg'}
+                    src={getOptimizedImageUrl(cat.image_url, { width: 320, crop: 'limit' }) || '/images/placeholder.jpg'}
                     alt={cat.name}
+                    loading="lazy"
                     className="w-full h-full object-cover object-top rounded-full"
                     onError={(e: any) => { e.target.src = '/images/placeholder.jpg' }}
                   />
                 </div>
-                <h3 className={`font-sans font-bold text-xs xs:text-sm uppercase tracking-wider transition-colors ${
-                  cat.slug.includes('plus-size') ? 'text-wine' : 'text-charcoal group-hover:text-wine'
-                }`}>
+                <h3 className={`font-sans font-bold text-xs xs:text-sm uppercase tracking-wider transition-colors ${cat.slug.includes('plus-size') ? 'text-wine' : 'text-charcoal group-hover:text-wine'
+                  }`}>
                   {cat.name}
                 </h3>
               </Link>
