@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import SalesChart from '@/components/admin/SalesChart'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export const revalidate = 0
 
@@ -42,7 +43,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      
+
       {/* ── Dashboard Heading ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -72,7 +73,7 @@ export default async function AdminDashboardPage() {
 
       {/* ── 6 Real Statistics Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        
+
         {/* Total Sales */}
         <div className="bg-white p-4 rounded-xl border border-border shadow-xs space-y-2">
           <div className="flex items-center justify-between text-mid">
@@ -154,7 +155,7 @@ export default async function AdminDashboardPage() {
 
       {/* ── Two Column: Recent Orders & Top Products ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Recent Orders Table */}
         <div className="lg:col-span-8 bg-white rounded-xl border border-border p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-4">
@@ -229,7 +230,7 @@ export default async function AdminDashboardPage() {
             {topProducts.map((prod) => (
               <div key={prod.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#faf7f2] transition-colors">
                 <img
-                  src={prod.primary_image || '/images/placeholder.jpg'}
+                  src={getOptimizedImageUrl(prod.primary_image, { width: 96, height: 112, crop: 'fill' }) || '/images/placeholder.jpg'}
                   alt={prod.name}
                   className="w-12 h-14 object-cover object-top rounded border border-border flex-shrink-0"
                 />

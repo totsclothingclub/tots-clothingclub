@@ -19,6 +19,7 @@ import {
 import Link from 'next/link'
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 type FilterTab = 'all' | 'navbar' | 'shop_dropdown' | 'plus_size_dropdown' | 'none'
 
@@ -132,11 +133,11 @@ export default function AdminCategoriesPage() {
     setLoading(true)
 
     const slug = editingCategory.slug?.trim() || editingCategory.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    
+
     // Auto-align parent if shop or plus-size dropdown is chosen
     let parentId = editingCategory.parent_id || null
     const loc = editingCategory.nav_location || 'shop_dropdown'
-    
+
     if (loc === 'shop_dropdown' && !parentId) {
       const shopCat = categories.find(c => c.slug === 'shop')
       if (shopCat) parentId = shopCat.id
@@ -280,7 +281,7 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      
+
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -313,51 +314,46 @@ export default function AdminCategoriesPage() {
       <div className="flex items-center gap-2 overflow-x-auto border-b border-border/80 pb-2">
         <button
           onClick={() => setActiveTab('all')}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
-            activeTab === 'all'
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'all'
               ? 'bg-charcoal text-white shadow-xs'
               : 'bg-white text-charcoal border border-border hover:bg-beige/50'
-          }`}
+            }`}
         >
           All Categories ({categories.length})
         </button>
         <button
           onClick={() => setActiveTab('navbar')}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
-            activeTab === 'navbar'
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'navbar'
               ? 'bg-purple-700 text-white shadow-xs'
               : 'bg-white text-charcoal border border-border hover:bg-beige/50'
-          }`}
+            }`}
         >
           Top Navbar ({navbarCount})
         </button>
         <button
           onClick={() => setActiveTab('shop_dropdown')}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
-            activeTab === 'shop_dropdown'
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'shop_dropdown'
               ? 'bg-amber-700 text-white shadow-xs'
               : 'bg-white text-charcoal border border-border hover:bg-beige/50'
-          }`}
+            }`}
         >
           SHOP Dropdown ({shopCount})
         </button>
         <button
           onClick={() => setActiveTab('plus_size_dropdown')}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
-            activeTab === 'plus_size_dropdown'
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'plus_size_dropdown'
               ? 'bg-rose-700 text-white shadow-xs'
               : 'bg-white text-charcoal border border-border hover:bg-beige/50'
-          }`}
+            }`}
         >
           PLUS SIZE Dropdown ({plusSizeCount})
         </button>
         <button
           onClick={() => setActiveTab('none')}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${
-            activeTab === 'none'
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'none'
               ? 'bg-gray-700 text-white shadow-xs'
               : 'bg-white text-charcoal border border-border hover:bg-beige/50'
-          }`}
+            }`}
         >
           Unlisted ({unlistedCount})
         </button>
@@ -398,13 +394,13 @@ export default function AdminCategoriesPage() {
               <tbody className="divide-y divide-border/60">
                 {filteredCategories.map(cat => (
                   <tr key={cat.id} className="hover:bg-[#faf7f2]/50 transition-colors">
-                    
+
                     {/* Category Name & Slug */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-beige/60 border border-border flex-shrink-0">
                           <img
-                            src={cat.image_url || '/images/placeholder.jpg'}
+                            src={getOptimizedImageUrl(cat.image_url, { width: 80, height: 80, crop: 'fill' }) || '/images/placeholder.jpg'}
                             alt={cat.name}
                             className="w-full h-full object-cover"
                             onError={(e: any) => { e.target.src = '/images/placeholder.jpg' }}
@@ -436,11 +432,10 @@ export default function AdminCategoriesPage() {
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => handleToggleActive(cat)}
-                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                          cat.is_active
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${cat.is_active
                             ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                          }`}
                         title="Click to toggle visibility"
                       >
                         {cat.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -488,7 +483,7 @@ export default function AdminCategoriesPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadein">
           <div className="bg-white rounded-2xl border border-border shadow-panel max-w-lg w-full max-h-[92vh] overflow-y-auto animate-fadeup">
-            
+
             {/* Modal Header */}
             <div className="p-5 border-b border-border flex items-center justify-between bg-[#faf7f2] sticky top-0 z-10">
               <h3 className="font-serif text-xl font-bold text-charcoal">
@@ -504,7 +499,7 @@ export default function AdminCategoriesPage() {
 
             {/* Modal Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
-              
+
               {/* Category Name */}
               <div>
                 <label className="font-semibold block mb-1 text-charcoal">
@@ -541,7 +536,7 @@ export default function AdminCategoriesPage() {
 
               {/* ── Dropdown Selects for Parent Category & Navigation Location ── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#faf7f2] rounded-xl border border-border">
-                
+
                 {/* Parent Category SELECT (No manual typing!) */}
                 <div>
                   <label className="font-semibold block mb-1 text-charcoal">
@@ -685,9 +680,18 @@ export default function AdminCategoriesPage() {
                     className="hidden"
                   />
                   {(uploadPreview || editingCategory.image_url) && (
-                    <span className="text-[11px] text-emerald-700 font-medium truncate max-w-[200px]">
-                      Image attached ✓
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-md overflow-hidden border border-border bg-white flex-shrink-0">
+                        <img
+                          src={getOptimizedImageUrl(uploadPreview || editingCategory.image_url, { width: 64, height: 64, crop: 'fill' })}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-[11px] text-emerald-700 font-medium truncate max-w-[200px]">
+                        Image attached ✓
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

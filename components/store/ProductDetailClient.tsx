@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Product, ProductVariant, Review, getProductStock } from '@/lib/types'
 import { useCart } from '@/lib/context/CartContext'
+import { getOptimizedImageUrl, getCloudinarySrcSet } from '@/lib/cloudinary-utils'
 import { useWishlist } from '@/lib/context/WishlistContext'
 import { submitReview } from '@/lib/supabase/data-service'
 
@@ -41,13 +42,13 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
     : [{ id: '1', product_id: product.id, image_url: product.primary_image || '/images/placeholder.jpg', is_primary: true, display_order: 1 }]
 
   const [activeImageIndex, setActiveImageIndex] = useState(0)
-  
+
   // Available sizes from product
   const availableSizes = product.available_sizes && product.available_sizes.length > 0
     ? product.available_sizes
     : ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL']
   const [selectedSize, setSelectedSize] = useState<string>(product.available_sizes?.[0] || 'M')
-  
+
   // Dynamic color variants from admin product data
   const colors: { name: string; img?: string; hex?: string }[] = []
   if (product.variants && product.variants.length > 0) {
@@ -86,7 +87,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
   const [newComment, setNewComment] = useState('')
 
   const regular = product.regular_price
-  const sale    = product.sale_price || regular
+  const sale = product.sale_price || regular
   const discount = product.discount_percent || (product.sale_price ? Math.round(((regular - sale) / regular) * 100) : 25)
   const isWishlisted = isInWishlist(product.id)
 
@@ -129,7 +130,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
   return (
     <div className="space-y-4 lg:space-y-6 max-w-6xl mx-auto pb-24 lg:pb-16">
-      
+
       {/* ── Mobile Top Back Bar (Screen 3 Reference) ── */}
       <div className="flex lg:hidden items-center justify-between py-2 border-b border-border">
         <button
@@ -154,14 +155,16 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
       {/* ── Main Two Column Product Section ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
-        
+
         {/* ── Left Column: Imagery & Thumbnails ── */}
         <div className="lg:col-span-6 space-y-3 w-full max-w-md mx-auto lg:max-w-none lg:sticky lg:top-24 self-start flex flex-col items-center">
-          
+
           {/* Main Large Image Container — Scaled down on mobile with full image visible */}
           <div className="relative w-full max-w-[280px] xs:max-w-[310px] sm:max-w-[360px] lg:max-w-[500px] xl:max-w-[540px] aspect-[3/4] max-h-[360px] xs:max-h-[400px] sm:max-h-[460px] lg:max-h-[540px] xl:max-h-[580px] bg-[#f5efe6] rounded-3xl overflow-hidden shadow-lg border border-border flex items-center justify-center mx-auto">
             <img
-              src={images[activeImageIndex]?.image_url || product.primary_image}
+              src={getOptimizedImageUrl(images[activeImageIndex]?.image_url || product.primary_image, { width: 1080, height: 1440, crop: 'fit' })}
+              srcSet={getCloudinarySrcSet(images[activeImageIndex]?.image_url || product.primary_image, [360, 540, 720, 1080], { crop: 'fit' }) || undefined}
+              sizes="(max-width: 640px) 310px, (max-width: 1024px) 360px, 540px"
               alt={product.name}
               className="w-full h-full object-contain object-center transition-all duration-300"
             />
@@ -194,11 +197,10 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
               <button
                 key={img.id || idx}
                 onClick={() => setActiveImageIndex(idx)}
-                className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
-                  activeImageIndex === idx ? 'border-gold shadow-md ring-2 ring-gold/40' : 'border-border opacity-70 hover:opacity-100'
-                }`}
+                className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${activeImageIndex === idx ? 'border-gold shadow-md ring-2 ring-gold/40' : 'border-border opacity-70 hover:opacity-100'
+                  }`}
               >
-                <img src={img.image_url} alt="" className="w-full h-full object-contain object-center bg-[#f5efe6]" />
+                <img src={getOptimizedImageUrl(img.image_url, { width: 140, height: 175, crop: 'fit' })} alt="" className="w-full h-full object-contain object-center bg-[#f5efe6]" />
               </button>
             ))}
           </div>
@@ -206,7 +208,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
         {/* ── Right Column: Details, Selectors, Highlights & Actions ── */}
         <div className="lg:col-span-6 space-y-6">
-          
+
           {/* Title & Reviews */}
           <div className="space-y-2">
             <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-charcoal leading-tight">
@@ -243,12 +245,11 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
                       }
                     }}
                     title={col.name}
-                    className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${
-                      selectedColor === col.name ? 'border-wine scale-110 shadow-md ring-2 ring-wine/30' : 'border-border opacity-70 hover:opacity-100'
-                    }`}
+                    className={`relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all p-0.5 ${selectedColor === col.name ? 'border-wine scale-110 shadow-md ring-2 ring-wine/30' : 'border-border opacity-70 hover:opacity-100'
+                      }`}
                   >
                     {col.img && !col.img.includes('placeholder') ? (
-                      <img src={col.img} alt={col.name} className="w-full h-full object-cover rounded-full" />
+                      <img src={getOptimizedImageUrl(col.img, { width: 80, height: 80, crop: 'fill' })} alt={col.name} className="w-full h-full object-cover rounded-full" />
                     ) : col.hex ? (
                       <div className="w-full h-full rounded-full" style={{ backgroundColor: col.hex }} />
                     ) : (
@@ -286,11 +287,10 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
                     key={size}
                     type="button"
                     onClick={() => setSelectedSize(size)}
-                    className={`text-xs font-semibold px-4 py-2.5 rounded-lg border transition-all ${
-                      isSelected
+                    className={`text-xs font-semibold px-4 py-2.5 rounded-lg border transition-all ${isSelected
                         ? 'bg-[#141414] text-cream border-[#141414] shadow-sm font-bold'
                         : 'bg-white text-charcoal border-border hover:border-gold hover:bg-beige'
-                    }`}
+                      }`}
                   >
                     {size}
                   </button>
@@ -453,7 +453,7 @@ export const ProductDetailClient: React.FC<ProductDetailClientProps> = ({ produc
 
           {/* ── Accordion Sections ── */}
           <div className="divide-y divide-border border-b border-border text-xs">
-            
+
             {/* Description */}
             <div>
               <button

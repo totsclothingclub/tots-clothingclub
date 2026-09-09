@@ -8,6 +8,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import type { InstagramPost } from '@/lib/types'
+import { getOptimizedImageUrl, getCloudinarySrcSet } from '@/lib/cloudinary-utils'
 
 interface Props {
   posts?: InstagramPost[]
@@ -24,6 +25,9 @@ function InstagramImageCard({
 }) {
   const targetUrl = post.instagram_url || post.post_url || `https://instagram.com/${cleanHandle}`
 
+  const optimizedSrc = getOptimizedImageUrl(post.image_url, { width: 480, crop: 'limit' })
+  const srcSet = getCloudinarySrcSet(post.image_url, [240, 360, 480], { crop: 'limit' })
+
   return (
     <a
       href={targetUrl}
@@ -33,7 +37,9 @@ function InstagramImageCard({
     >
       {/* Admin Uploaded Image (4:5 Aspect Ratio, Never Distorted) */}
       <img
-        src={post.image_url}
+        src={optimizedSrc}
+        srcSet={srcSet || undefined}
+        sizes="(max-width: 640px) 60vw, (max-width: 1024px) 240px, 260px"
         alt={post.caption || 'Instagram Post'}
         loading="lazy"
         className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
@@ -217,9 +223,8 @@ export default function InstagramReelsGallery({ posts = [], instagramHandle = 't
                   type="button"
                   onClick={() => scrollToIdx(idx)}
                   aria-label={`Go to slide ${idx + 1}`}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    activeIndex === idx ? 'w-6 bg-purple-700' : 'w-2 bg-purple-200'
-                  }`}
+                  className={`h-2 rounded-full transition-all duration-300 ${activeIndex === idx ? 'w-6 bg-purple-700' : 'w-2 bg-purple-200'
+                    }`}
                 />
               ))}
             </div>

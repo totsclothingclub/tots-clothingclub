@@ -10,6 +10,7 @@ import { useWishlist } from '@/lib/context/WishlistContext'
 import { getAllOrders, getProducts } from '@/lib/supabase/data-service'
 import { Order, Address, Product } from '@/lib/types'
 import Link from 'next/link'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 import {
   User,
   Package,
@@ -268,7 +269,7 @@ export default function AccountPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start max-w-3xl mx-auto">
-            
+
             {/* Form Container */}
             <div className="md:col-span-7 bg-white p-6 sm:p-8 rounded-2xl border border-border shadow-xs space-y-5">
               {/* Tab selector */}
@@ -276,18 +277,16 @@ export default function AccountPage() {
                 <button
                   type="button"
                   onClick={() => { setIsSignUp(false); setAuthError(''); }}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                    !isSignUp ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                  }`}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${!isSignUp ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                    }`}
                 >
                   Sign In
                 </button>
                 <button
                   type="button"
                   onClick={() => { setIsSignUp(true); setAuthError(''); }}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                    isSignUp ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                  }`}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${isSignUp ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                    }`}
                 >
                   New Member
                 </button>
@@ -388,7 +387,7 @@ export default function AccountPage() {
                 <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-charcoal">
                   Member Privileges
                 </h3>
-                
+
                 <div className="space-y-3 text-xs text-mid">
                   <div className="flex items-start gap-2.5">
                     <Package size={16} className="text-gold flex-shrink-0 mt-0.5" />
@@ -434,18 +433,18 @@ export default function AccountPage() {
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 pb-24">
-        
+
         {/* Profile Card Header (Clean customer banner, NO admin switch) */}
         <div className="bg-white p-6 rounded-2xl border border-border shadow-xs flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-[#1a1a1a] text-gold font-heading text-xl font-bold flex items-center justify-center border-2 border-gold shadow-xs">
               {user?.full_name
                 ? user.full_name
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2)
+                  .split(' ')
+                  .map(n => n[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2)
                 : 'U'}
             </div>
             <div>
@@ -477,11 +476,10 @@ export default function AccountPage() {
         <div className="flex flex-wrap gap-2 border-b border-border pb-3">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
-              activeTab === 'orders'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${activeTab === 'orders'
                 ? 'bg-charcoal text-white shadow-xs'
                 : 'bg-white text-mid hover:text-charcoal hover:bg-beige/60 border border-border'
-            }`}
+              }`}
           >
             <Package size={15} className={activeTab === 'orders' ? 'text-gold' : ''} />
             <span>My Orders & Track ({userOrders.length})</span>
@@ -489,11 +487,10 @@ export default function AccountPage() {
 
           <button
             onClick={() => setActiveTab('addresses')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
-              activeTab === 'addresses'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${activeTab === 'addresses'
                 ? 'bg-charcoal text-white shadow-xs'
                 : 'bg-white text-mid hover:text-charcoal hover:bg-beige/60 border border-border'
-            }`}
+              }`}
           >
             <MapPin size={15} className={activeTab === 'addresses' ? 'text-gold' : ''} />
             <span>Saved Addresses ({addresses.length})</span>
@@ -501,11 +498,10 @@ export default function AccountPage() {
 
           <button
             onClick={() => setActiveTab('wishlist')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
-              activeTab === 'wishlist'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${activeTab === 'wishlist'
                 ? 'bg-charcoal text-white shadow-xs'
                 : 'bg-white text-mid hover:text-charcoal hover:bg-beige/60 border border-border'
-            }`}
+              }`}
           >
             <Heart size={15} className={activeTab === 'wishlist' ? 'text-gold' : ''} />
             <span>Saved Wishlist ({wishlistProductIds.length})</span>
@@ -513,11 +509,10 @@ export default function AccountPage() {
 
           <button
             onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
-              activeTab === 'profile'
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${activeTab === 'profile'
                 ? 'bg-charcoal text-white shadow-xs'
                 : 'bg-white text-mid hover:text-charcoal hover:bg-beige/60 border border-border'
-            }`}
+              }`}
           >
             <User size={15} className={activeTab === 'profile' ? 'text-gold' : ''} />
             <span>Profile Settings</span>
@@ -597,7 +592,7 @@ export default function AccountPage() {
                     {order.items?.map(item => (
                       <div key={item.id} className="flex gap-3.5 items-center p-2 rounded-xl bg-cream/40 border border-border/40">
                         <img
-                          src={item.image_url || '/images/placeholder.jpg'}
+                          src={getOptimizedImageUrl(item.image_url, { width: 96, height: 112, crop: 'fill' }) || '/images/placeholder.jpg'}
                           alt={item.product_name}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=300&auto=format&fit=crop&q=80'
@@ -664,9 +659,8 @@ export default function AccountPage() {
                   return (
                     <div
                       key={addr.id}
-                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 relative ${
-                        addr.is_default ? 'bg-white border-gold shadow-sm ring-1 ring-gold/40' : 'bg-white border-border shadow-2xs'
-                      }`}
+                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 relative ${addr.is_default ? 'bg-white border-gold shadow-sm ring-1 ring-gold/40' : 'bg-white border-border shadow-2xs'
+                        }`}
                     >
                       <div>
                         {/* Header Badge */}
@@ -776,7 +770,7 @@ export default function AccountPage() {
                     className="p-4 bg-white rounded-2xl border border-border shadow-2xs flex gap-3.5 items-center justify-between"
                   >
                     <img
-                      src={prod.primary_image}
+                      src={getOptimizedImageUrl(prod.primary_image, { width: 128, height: 160, crop: 'fill' })}
                       alt={prod.name}
                       className="w-16 h-20 object-cover rounded-xl border border-border flex-shrink-0"
                     />
@@ -896,7 +890,7 @@ export default function AccountPage() {
       {showAddressModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadein">
           <div className="relative w-full max-w-md bg-cream border border-gold/30 rounded-2xl shadow-2xl overflow-hidden animate-fadeup">
-            
+
             <div className="bg-[#141414] text-cream px-6 py-4 flex items-center justify-between border-b border-[#262626]">
               <h3 className="font-heading text-base font-bold uppercase tracking-wide">
                 {editingAddressId ? 'Edit Address' : 'Add New Delivery Address'}
@@ -922,11 +916,10 @@ export default function AccountPage() {
                       key={lbl}
                       type="button"
                       onClick={() => setAddrLabel(lbl)}
-                      className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                        addrLabel === lbl
+                      className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all ${addrLabel === lbl
                           ? 'bg-charcoal text-white border-charcoal'
                           : 'bg-white text-mid border-border hover:border-gold'
-                      }`}
+                        }`}
                     >
                       {lbl}
                     </button>

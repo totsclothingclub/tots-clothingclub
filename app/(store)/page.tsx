@@ -10,6 +10,7 @@ import HomeCategoryCarousel from '@/components/store/HomeCategoryCarousel'
 import InstagramReelsGallery from '@/components/store/InstagramReelsGallery'
 import NewsletterForm from '@/components/store/NewsletterForm'
 import { getActiveBanners, getCategories, getProducts, getInstagramPosts, getActivePromoCards, getStoreSettings } from '@/lib/supabase/data-service'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 import {
   ArrowRight,
   Truck,
@@ -48,7 +49,7 @@ export default async function HomePage() {
       <Header initialCategories={categories} />
 
       <main className="flex-1 space-y-12 lg:space-y-16 pb-16">
-        
+
         {/* ═══════════════════════════════════════════════════
             1. HERO SLIDER SECTION (Functional Desktop & Mobile Slider)
         ═══════════════════════════════════════════════════ */}
@@ -102,10 +103,10 @@ export default async function HomePage() {
                 const isDark = card.bg_color === 'wine' || card.bg_color === 'charcoal'
                 const bgClass =
                   card.bg_color === 'wine' ? 'bg-[#7a1e3c] text-white border-[#7a1e3c]' :
-                  card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
-                  card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
-                  card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
-                  'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
+                    card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
+                      card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
+                        card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
+                          'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
                 const labelColor = isDark ? 'text-gold/90' : 'text-[#b8966a]'
                 const btnClass = isDark
                   ? 'border-white text-white hover:bg-white hover:text-wine'
@@ -152,8 +153,9 @@ export default async function HomePage() {
                     <div className="w-[42%] flex-shrink-0 bg-transparent overflow-hidden flex items-end justify-center relative">
                       {card.image_url ? (
                         <img
-                          src={card.image_url}
+                          src={getOptimizedImageUrl(card.image_url, { width: 800, crop: 'limit' })}
                           alt={card.title}
+                          loading="lazy"
                           className="w-full h-full object-cover object-top bg-transparent hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -175,10 +177,10 @@ export default async function HomePage() {
                 const isDark = card.bg_color === 'wine' || card.bg_color === 'charcoal'
                 const bgClass =
                   card.bg_color === 'wine' ? 'bg-wine text-white border-wine' :
-                  card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
-                  card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
-                  card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
-                  'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
+                    card.bg_color === 'charcoal' ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' :
+                      card.bg_color === 'gold' ? 'bg-[#b8966a] text-white border-[#b8966a]' :
+                        card.bg_color === 'white' ? 'bg-white text-charcoal border-[#e8dfd2]' :
+                          'bg-[#f5efe6] text-charcoal border-[#e8dfd2]'
                 const labelColor = isDark ? 'text-gold/90' : 'text-mid'
                 const btnClass = isDark
                   ? 'border-white/90 text-white hover:bg-white hover:text-wine'
@@ -225,8 +227,9 @@ export default async function HomePage() {
                     <div className="w-[42%] flex-shrink-0 overflow-hidden bg-transparent flex items-center justify-center relative">
                       {card.image_url ? (
                         <img
-                          src={card.image_url}
+                          src={getOptimizedImageUrl(card.image_url, { width: 600, crop: 'limit' })}
                           alt={card.title}
+                          loading="lazy"
                           className="w-full h-full object-cover object-top bg-transparent"
                         />
                       ) : (
@@ -258,7 +261,7 @@ export default async function HomePage() {
         ═══════════════════════════════════════════════════ */}
         <section className="hidden md:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
           <div className="grid grid-cols-5 gap-4 py-8 border-y border-border text-center">
-            
+
             <Link href="/shipping-policy" className="flex flex-col items-center gap-1.5 p-2 hover:opacity-80 transition-opacity">
               <Truck size={20} className="text-gold" />
               <h5 className="font-serif text-xs font-bold text-charcoal uppercase">HOME DELIVERY</h5>
