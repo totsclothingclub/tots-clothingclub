@@ -273,8 +273,17 @@ export default function AdminOrdersPage() {
                   <p className="text-mid flex items-start gap-1">
                     <MapPin size={12} className="mt-0.5 flex-shrink-0" />
                     <span>
-                      {selectedOrder.shipping_address?.street || 'N/A'}, {selectedOrder.shipping_address?.city || ''},{' '}
-                      {selectedOrder.shipping_address?.state || ''} {selectedOrder.shipping_address?.pincode || ''}
+                      {typeof selectedOrder.shipping_address === 'string'
+                        ? selectedOrder.shipping_address
+                        : [
+                            selectedOrder.shipping_address?.street,
+                            selectedOrder.shipping_address?.apartment,
+                            selectedOrder.shipping_address?.city,
+                            selectedOrder.shipping_address?.state,
+                            selectedOrder.shipping_address?.pincode,
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || 'N/A'}
                     </span>
                   </p>
                 </div>
@@ -282,29 +291,56 @@ export default function AdminOrdersPage() {
 
               {/* Items List */}
               <div className="space-y-3">
-                <h4 className="font-serif text-base font-semibold text-charcoal border-b border-border pb-1">
-                  Items Ordered
-                </h4>
-                <div className="space-y-2">
+                <div className="flex items-center justify-between border-b border-border pb-1">
+                  <h4 className="font-serif text-base font-semibold text-charcoal">
+                    Items Ordered ({selectedOrder.items?.length || 0})
+                  </h4>
+                  <span className="text-[11px] text-mid">
+                    Total Units: {selectedOrder.items?.reduce((s, i) => s + (Number(i.quantity) || 1), 0) || 1}
+                  </span>
+                </div>
+                <div className="space-y-2.5">
                   {selectedOrder.items && selectedOrder.items.length > 0 ? (
                     selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-white border border-border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {item.image_url && (
-                            <img src={getOptimizedImageUrl(item.image_url, { width: 80, height: 96, crop: 'fill' })} alt="" className="w-10 h-12 object-cover rounded" />
-                          )}
-                          <div>
-                            <p className="font-semibold text-charcoal">{item.product_name}</p>
-                            <p className="text-[11px] text-mid">Size: {item.size} • Qty: {item.quantity}</p>
+                      <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-border rounded-xl shadow-2xs hover:border-gold/50 transition-colors">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <img
+                            src={item.image_url || '/images/placeholder.jpg'}
+                            alt={item.product_name}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=300&auto=format&fit=crop&q=80'
+                            }}
+                            className="w-12 h-16 object-cover rounded-lg border border-border shrink-0 bg-[#faf7f2] shadow-2xs"
+                          />
+                          <div className="space-y-1 min-w-0">
+                            <p className="font-semibold text-charcoal truncate">{item.product_name}</p>
+                            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                              <span className="inline-flex items-center font-bold px-2 py-0.5 rounded bg-[#f5f1ea] border border-border text-charcoal">
+                                Size: {item.size || 'Standard'}
+                              </span>
+                              {item.color && item.color !== 'Standard' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-stone-100 text-stone-700">
+                                  Color: {item.color}
+                                </span>
+                              )}
+                              <span className="font-semibold text-mid">
+                                Qty: <strong className="text-charcoal">{item.quantity}</strong>
+                              </span>
+                              <span className="text-stone-400">•</span>
+                              <span className="text-mid">₹{Number(item.price).toLocaleString('en-IN')} each</span>
+                            </div>
                           </div>
                         </div>
-                        <span className="font-serif font-bold text-wine">
-                          ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                        <span className="font-serif font-bold text-wine text-sm shrink-0 pl-3">
+                          ₹{(Number(item.price) * (Number(item.quantity) || 1)).toLocaleString('en-IN')}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-mid italic">Standard catalog package fulfillment.</p>
+                    <div className="p-4 bg-[#faf7f2] border border-border/80 rounded-xl text-center text-mid text-xs">
+                      <p className="font-medium text-charcoal">No individual item rows saved for this historical order.</p>
+                      <p className="text-[11px] text-mid mt-0.5">Total order amount: ₹{selectedOrder.total}</p>
+                    </div>
                   )}
                 </div>
               </div>

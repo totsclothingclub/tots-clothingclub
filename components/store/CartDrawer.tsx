@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useCart } from '@/lib/context/CartContext'
-import { validateCoupon, getActiveCoupons } from '@/lib/supabase/data-service'
+import { validateCoupon, getActiveCoupons, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
 import { Coupon } from '@/lib/types'
 import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
@@ -26,18 +26,25 @@ export const CartDrawer: React.FC = () => {
 
   const [couponInput, setCouponInput] = useState('')
   const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([])
+  const [baseShippingFee, setBaseShippingFee] = useState<number>(80)
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const touchStartYRef = useRef<number>(0)
 
-  const shippingFee = 80
+  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)
+  const shippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
 
-  // 1. Fetch active coupons when drawer opens
+  // 1. Fetch active coupons & store settings when drawer opens
   useEffect(() => {
     if (isDrawerOpen) {
       getActiveCoupons().then(list => setActiveCoupons(list || []))
+      getStoreSettings().then(s => {
+        if (s && s.standard_shipping_fee !== undefined && s.standard_shipping_fee !== null) {
+          setBaseShippingFee(Number(s.standard_shipping_fee))
+        }
+      })
     }
   }, [isDrawerOpen])
 

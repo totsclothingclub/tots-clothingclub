@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAllInstagramPosts, saveInstagramPost, deleteInstagramPost } from '@/lib/supabase/data-service'
+import { deleteImageByUrlFromCloudinary } from '@/lib/cloudinary'
 
 export const dynamic = 'force-dynamic'
 
@@ -120,7 +121,13 @@ export async function DELETE(req: NextRequest) {
 
     if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
       const supabase = createAdminClient()
+      const { data: igData } = await supabase.from('instagram_posts').select('image_url').eq('id', id).single()
+
       await supabase.from('instagram_posts').delete().eq('id', id)
+
+      if (igData?.image_url) {
+        try { await deleteImageByUrlFromCloudinary(igData.image_url) } catch (e) {}
+      }
     }
 
     await deleteInstagramPost(id)

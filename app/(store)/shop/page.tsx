@@ -15,8 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 60 // 1-minute revalidation for shop page
 
 interface ShopPageProps {
   searchParams: {

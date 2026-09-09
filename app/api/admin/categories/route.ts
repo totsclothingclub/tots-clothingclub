@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getAllCategories, saveCategory, deleteCategory } from '@/lib/supabase/data-service'
+import { deleteImageByUrlFromCloudinary } from '@/lib/cloudinary'
 
 export async function GET() {
   try {
@@ -116,7 +117,17 @@ export async function DELETE(req: NextRequest) {
 
     if (url && key && !url.includes('placeholder')) {
       const supabase = createAdminClient()
+      const { data: catData } = await supabase.from('categories').select('image_url').eq('id', id).single()
+
       await supabase.from('categories').delete().eq('id', id)
+
+      if (catData?.image_url) {
+        try {
+          await deleteImageByUrlFromCloudinary(catData.image_url)
+        } catch (cErr) {
+          console.warn('Failed to delete category image from Cloudinary:', cErr)
+        }
+      }
     }
 
     await deleteCategory(id)

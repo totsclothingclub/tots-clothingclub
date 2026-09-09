@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { getAllAdminProducts, deleteProduct, getCategories } from '@/lib/supabase/data-service'
 import { Product, Category, getProductStock } from '@/lib/types'
@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   Sparkles,
   AlertCircle,
-  Package
+  Package,
+  ChevronDown,
+  Check,
+  Filter
 } from 'lucide-react'
 
 import { useConfirm } from '@/components/ui/ConfirmationModal'
@@ -34,7 +37,24 @@ export default function AdminProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedStock, setSelectedStock] = useState('all')
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+  const [stockDropdownOpen, setStockDropdownOpen] = useState(false)
+  const categoryDropdownRef = useRef<HTMLDivElement>(null)
+  const stockDropdownRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setCategoryDropdownOpen(false)
+      }
+      if (stockDropdownRef.current && !stockDropdownRef.current.contains(e.target as Node)) {
+        setStockDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const loadData = async () => {
     setLoading(true)
@@ -177,30 +197,142 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Dropdowns */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={selectedCategory}
-            onChange={e => setSelectedCategory(e.target.value)}
-            className="text-xs py-2 px-3 border border-border rounded-lg bg-white outline-none focus:border-gold"
-            aria-label="Filter by Category"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Category Custom Dropdown */}
+          <div className="relative" ref={categoryDropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryDropdownOpen(prev => !prev)
+                setStockDropdownOpen(false)
+              }}
+              className={`inline-flex items-center justify-between gap-2 text-xs py-2 px-3 border rounded-lg bg-white font-medium transition-all shadow-2xs min-w-[135px] ${
+                categoryDropdownOpen || selectedCategory !== 'all'
+                  ? 'border-gold text-charcoal ring-2 ring-gold/10'
+                  : 'border-border text-charcoal hover:bg-[#faf7f2] hover:border-border/80'
+              }`}
+            >
+              <span className="truncate max-w-[105px]">
+                {selectedCategory === 'all'
+                  ? 'All Categories'
+                  : categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
+              </span>
+              <ChevronDown
+                size={13}
+                className={`text-mid shrink-0 transition-transform duration-200 ${
+                  categoryDropdownOpen ? 'rotate-180 text-gold' : ''
+                }`}
+              />
+            </button>
 
-          <select
-            value={selectedStock}
-            onChange={e => setSelectedStock(e.target.value)}
-            className="text-xs py-2 px-3 border border-border rounded-lg bg-white outline-none focus:border-gold font-medium"
-            aria-label="Filter by Stock Level"
-          >
-            <option value="all">All Inventory</option>
-            <option value="in_stock">In Stock (&gt;5)</option>
-            <option value="low_stock">Low Stock (1-5)</option>
-            <option value="out_of_stock">Out of Stock (0)</option>
-          </select>
+            {categoryDropdownOpen && (
+              <div className="absolute left-0 mt-1 z-50 w-44 bg-white border border-border/80 rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto animate-fadein">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory('all')
+                    setCategoryDropdownOpen(false)
+                  }}
+                  className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
+                    selectedCategory === 'all'
+                      ? 'bg-[#faf7f2] text-wine font-bold'
+                      : 'text-charcoal hover:bg-[#faf7f2]/80 hover:text-charcoal'
+                  }`}
+                >
+                  <span>All Categories</span>
+                  {selectedCategory === 'all' && <Check size={13} className="text-wine shrink-0" />}
+                </button>
+                <div className="my-1 border-t border-border/40" />
+                {categories.map(c => {
+                  const isSelected = selectedCategory === c.id
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(c.id)
+                        setCategoryDropdownOpen(false)
+                      }}
+                      className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? 'bg-[#faf7f2] text-wine font-bold'
+                          : 'text-charcoal hover:bg-[#faf7f2]/80 hover:text-charcoal'
+                      }`}
+                    >
+                      <span className="truncate pr-1.5">{c.name}</span>
+                      {isSelected && <Check size={13} className="text-wine shrink-0" />}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Inventory Stock Custom Dropdown */}
+          <div className="relative" ref={stockDropdownRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setStockDropdownOpen(prev => !prev)
+                setCategoryDropdownOpen(false)
+              }}
+              className={`inline-flex items-center justify-between gap-2 text-xs py-2 px-3 border rounded-lg bg-white font-medium transition-all shadow-2xs min-w-[130px] ${
+                stockDropdownOpen || selectedStock !== 'all'
+                  ? 'border-gold text-charcoal ring-2 ring-gold/10'
+                  : 'border-border text-charcoal hover:bg-[#faf7f2] hover:border-border/80'
+              }`}
+            >
+              <span className="flex items-center gap-1.5 truncate max-w-[100px]">
+                {selectedStock === 'in_stock' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                {selectedStock === 'low_stock' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />}
+                {selectedStock === 'out_of_stock' && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />}
+                {selectedStock === 'all' && 'All Inventory'}
+                {selectedStock === 'in_stock' && 'In Stock (>5)'}
+                {selectedStock === 'low_stock' && 'Low Stock (1-5)'}
+                {selectedStock === 'out_of_stock' && 'Out of Stock (0)'}
+              </span>
+              <ChevronDown
+                size={13}
+                className={`text-mid shrink-0 transition-transform duration-200 ${
+                  stockDropdownOpen ? 'rotate-180 text-gold' : ''
+                }`}
+              />
+            </button>
+
+            {stockDropdownOpen && (
+              <div className="absolute left-0 mt-1 z-50 w-40 bg-white border border-border/80 rounded-xl shadow-lg py-1 animate-fadein">
+                {[
+                  { value: 'all', label: 'All Inventory', dot: 'bg-stone-300' },
+                  { value: 'in_stock', label: 'In Stock (>5)', dot: 'bg-emerald-500' },
+                  { value: 'low_stock', label: 'Low Stock (1-5)', dot: 'bg-amber-500' },
+                  { value: 'out_of_stock', label: 'Out of Stock (0)', dot: 'bg-rose-500' },
+                ].map(opt => {
+                  const isSelected = selectedStock === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStock(opt.value)
+                        setStockDropdownOpen(false)
+                      }}
+                      className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? 'bg-[#faf7f2] text-wine font-bold'
+                          : 'text-charcoal hover:bg-[#faf7f2]/80 hover:text-charcoal'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${opt.dot} shrink-0`} />
+                        <span>{opt.label}</span>
+                      </span>
+                      {isSelected && <Check size={13} className="text-wine shrink-0" />}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
           <span className="text-xs text-mid pl-2">
             Showing <strong className="text-charcoal">{filtered.length}</strong> of {products.length}

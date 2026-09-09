@@ -9,6 +9,7 @@ import {
   Review,
   StoreSettings,
   Order,
+  OrderItem,
   DashboardStats,
   ProductImage,
   ProductVariant,
@@ -63,6 +64,12 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     }
   }
   return storeSettings
+}
+
+export function calculateShippingFee(totalQuantity: number, baseFee: number = 80): number {
+  if (totalQuantity <= 0) return 0
+  const multiplier = Math.ceil(totalQuantity / 2)
+  return multiplier * baseFee
 }
 
 export async function updateStoreSettings(newSettings: Partial<StoreSettings>): Promise<StoreSettings> {
@@ -1380,6 +1387,106 @@ export async function deleteReview(id: string): Promise<boolean> {
 // -------------------------------------------------------------
 // ORDERS & CHECKOUT
 // -------------------------------------------------------------
+export function isValidUUID(str?: string | null): boolean {
+  if (!str) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str)
+}
+
+export async function reduceProductStock(orderItems?: OrderItem[]): Promise<void> {
+  if (!orderItems || orderItems.length === 0) return
+
+  for (const item of orderItems) {
+    const qty = Math.max(1, Number(item.quantity) || 1)
+    const pId = item.product_id
+
+    // 1. Update in-memory product stock
+    products = products.map(p => {
+      if ((pId && p.id === pId) || p.name.trim().toLowerCase() === (item.product_name || '').trim().toLowerCase()) {
+        const currentStock = typeof p.stock_quantity === 'number' ? p.stock_quantity : 25
+        const updatedVariants = p.variants?.map(v => {
+          if (v.size === item.size || v.id === item.variant_id) {
+            return { ...v, stock_quantity: Math.max(0, (Number(v.stock_quantity) || 10) - qty) }
+          }
+          return v
+        })
+        return {
+          ...p,
+          stock_quantity: Math.max(0, currentStock - qty),
+          variants: updatedVariants || p.variants
+        }
+      }
+      return p
+    })
+
+    // 2. Update Supabase products & product_variants tables
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = createClient()
+
+        if (pId && isValidUUID(pId)) {
+          const { data: prodData } = await supabase
+            .from('products')
+            .select('id, stock_quantity')
+            .eq('id', pId)
+            .single()
+
+          if (prodData) {
+            const current = typeof prodData.stock_quantity === 'number' ? prodData.stock_quantity : 25
+            const newStock = Math.max(0, current - qty)
+            await supabase.from('products').update({ stock_quantity: newStock }).eq('id', pId)
+          }
+
+          if (item.size) {
+            const { data: variants } = await supabase
+              .from('product_variants')
+              .select('id, stock_quantity')
+              .eq('product_id', pId)
+              .eq('size', item.size)
+
+            if (variants && variants.length > 0) {
+              const vCurrent = typeof variants[0].stock_quantity === 'number' ? variants[0].stock_quantity : 10
+              await supabase
+                .from('product_variants')
+                .update({ stock_quantity: Math.max(0, vCurrent - qty) })
+                .eq('id', variants[0].id)
+            }
+          }
+        } else if (item.product_name) {
+          const { data: prodsByName } = await supabase
+            .from('products')
+            .select('id, stock_quantity')
+            .ilike('name', item.product_name)
+            .limit(1)
+
+          if (prodsByName && prodsByName.length > 0) {
+            const foundId = prodsByName[0].id
+            const current = typeof prodsByName[0].stock_quantity === 'number' ? prodsByName[0].stock_quantity : 25
+            await supabase.from('products').update({ stock_quantity: Math.max(0, current - qty) }).eq('id', foundId)
+
+            if (item.size) {
+              const { data: variants } = await supabase
+                .from('product_variants')
+                .select('id, stock_quantity')
+                .eq('product_id', foundId)
+                .eq('size', item.size)
+
+              if (variants && variants.length > 0) {
+                const vCurrent = typeof variants[0].stock_quantity === 'number' ? variants[0].stock_quantity : 10
+                await supabase
+                  .from('product_variants')
+                  .update({ stock_quantity: Math.max(0, vCurrent - qty) })
+                  .eq('id', variants[0].id)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to reduce stock in Supabase for:', item.product_name, err)
+      }
+    }
+  }
+}
+
 export async function createOrder(orderPayload: Partial<Order>): Promise<Order> {
   const orderNumber = orderPayload.order_number || `TOTS-${Math.floor(10000 + Math.random() * 90000)}`
   const newOrder: Order = {
@@ -1438,18 +1545,31 @@ export async function createOrder(orderPayload: Partial<Order>): Promise<Order> 
 
       if (!error && data) {
         if (newOrder.items && newOrder.items.length > 0) {
-          const itemRows = newOrder.items.map(item => ({
-            order_id: data.id,
-            product_id: item.product_id || null,
-            variant_id: item.variant_id || null,
-            product_name: item.product_name,
-            size: item.size,
-            color: item.color,
-            price: item.price,
-            quantity: item.quantity,
-            image_url: item.image_url
-          }))
-          await supabase.from('order_items').insert(itemRows)
+          const itemRows = newOrder.items.map(item => {
+            const matchedProd = products.find(
+              p => (item.product_id && p.id === item.product_id) ||
+                   (item.product_name && p.name.trim().toLowerCase() === item.product_name.trim().toLowerCase())
+            )
+            const resolvedImg = item.image_url || matchedProd?.primary_image || null
+            return {
+              order_id: data.id,
+              product_id: isValidUUID(item.product_id) ? item.product_id : null,
+              variant_id: isValidUUID(item.variant_id) ? item.variant_id : null,
+              product_name: item.product_name || matchedProd?.name || 'Product',
+              size: item.size || 'Standard',
+              color: item.color || 'Standard',
+              price: Number(item.price) || 0,
+              quantity: Math.max(1, Number(item.quantity) || 1),
+              image_url: resolvedImg,
+            }
+          })
+          const { error: itemsError } = await supabase.from('order_items').insert(itemRows)
+          if (itemsError) {
+            console.error('Supabase order_items insert error:', itemsError)
+          }
+        }
+        if (newOrder.payment_status === 'Paid') {
+          await reduceProductStock(newOrder.items)
         }
         return { ...newOrder, id: data.id }
       } else if (error) {
@@ -1460,6 +1580,9 @@ export async function createOrder(orderPayload: Partial<Order>): Promise<Order> 
     }
   }
 
+  if (newOrder.payment_status === 'Paid') {
+    await reduceProductStock(newOrder.items)
+  }
   orders.unshift(newOrder)
   return newOrder
 }
@@ -1471,14 +1594,21 @@ export async function getOrderByRazorpayOrderId(razorpayOrderId: string): Promis
       const supabase = createClient()
       const { data, error } = await supabase
         .from('orders')
-        .select('*, items:order_items(*)')
+        .select('*, items:order_items(*, product:products(primary_image))')
         .eq('razorpay_order_id', razorpayOrderId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (!error && data) {
-        return data as Order
+        const order = data as Order
+        if (order.items) {
+          order.items = order.items.map(item => ({
+            ...item,
+            image_url: item.image_url || (item as any).product?.primary_image || null,
+          }))
+        }
+        return order
       }
     } catch (e) {
       console.warn('Supabase getOrderByRazorpayOrderId failed', e)
@@ -1519,9 +1649,13 @@ export async function markOrderAsPaid(params: {
 
       const { data, error } = await query.select('*, items:order_items(*)').maybeSingle()
       if (!error && data) {
+        const orderData = data as Order
         // update local cache as well
-        orders = orders.map(o => (o.id === data.id ? (data as Order) : o))
-        return data as Order
+        orders = orders.map(o => (o.id === orderData.id ? orderData : o))
+        if (orderData.items && orderData.items.length > 0) {
+          await reduceProductStock(orderData.items)
+        }
+        return orderData
       }
     } catch (e) {
       console.warn('Supabase markOrderAsPaid failed', e)
@@ -1537,6 +1671,9 @@ export async function markOrderAsPaid(params: {
     existing.order_status = 'Processing'
     existing.payment_id = payment_id
     if (payment_method) existing.payment_method = payment_method
+    if (existing.items && existing.items.length > 0) {
+      await reduceProductStock(existing.items)
+    }
     return existing
   }
   return null
@@ -1587,10 +1724,28 @@ export async function getAllOrders(): Promise<Order[]> {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('orders')
-        .select('*, items:order_items(*)')
+        .select('*, items:order_items(*, product:products(primary_image))')
         .order('created_at', { ascending: false })
       if (!error && data) {
-        orders = data as Order[]
+        orders = (data as Order[]).map(order => ({
+          ...order,
+          items: order.items?.map(item => {
+            const relProduct = (item as any).product
+            const img = item.image_url || relProduct?.primary_image
+            if (!img) {
+              const matched = products.find(
+                p => (item.product_id && p.id === item.product_id) ||
+                     (item.product_name && p.name.trim().toLowerCase() === item.product_name.trim().toLowerCase())
+              )
+              if (matched?.primary_image) {
+                return { ...item, image_url: matched.primary_image }
+              }
+            } else {
+              return { ...item, image_url: img }
+            }
+            return item
+          })
+        }))
         return orders
       }
     } catch (e) {

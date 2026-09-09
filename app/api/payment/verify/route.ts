@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { createOrder, getOrderByRazorpayOrderId, markOrderAsPaid } from '@/lib/supabase/data-service'
+import {
+  createOrder,
+  getOrderByRazorpayOrderId,
+  markOrderAsPaid,
+  getStoreSettings,
+  calculateShippingFee,
+  isValidUUID,
+  reduceProductStock
+} from '@/lib/supabase/data-service'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
@@ -81,31 +90,84 @@ export async function POST(req: Request) {
         finalOrderNumber = updated?.order_number || existingOrder.order_number
         finalOrderId = updated?.id || existingOrder.id
       }
+
+      // If existing order had no items attached, ensure items are stored and stock reduced
+      if ((!existingOrder.items || existingOrder.items.length === 0) && items && items.length > 0) {
+        try {
+          const supabase = createAdminClient()
+          const itemRows = items.map((i: any) => ({
+            order_id: existingOrder.id,
+            product_id: isValidUUID(i.product?.id || i.product_id || i.id) ? (i.product?.id || i.product_id || i.id) : null,
+            variant_id: isValidUUID(i.variant?.id) ? i.variant.id : null,
+            product_name: i.product?.name || i.product_name || 'Product',
+            size: i.variant?.size || i.size || 'Standard',
+            color: i.variant?.color || i.color || 'Standard',
+            price: Number(i.product?.sale_price || i.product?.regular_price || i.price || 0),
+            quantity: Math.max(1, Number(i.quantity) || 1),
+            image_url: i.product?.primary_image || i.image_url || null,
+          }))
+          await supabase.from('order_items').insert(itemRows)
+          await reduceProductStock(itemRows as any)
+        } catch (err) {
+          console.warn('Failed to insert fallback items for existing order:', err)
+        }
+      }
     } else {
-      // Fallback: create order if not pre-created
-      const orderItems = (items || []).map((i: any) => ({
-        id: `oi-${Math.random().toString(36).substring(2, 9)}`,
-        order_id: '',
-        product_id: i.product?.id || 'prod-custom',
-        variant_id: i.variant?.id || 'var-custom',
-        product_name: i.product?.name || 'Product',
-        size: i.variant?.size || 'Standard',
-        color: i.variant?.color || 'Standard',
-        price: Number(i.product?.sale_price || i.product?.regular_price || 0),
-        quantity: Number(i.quantity || 1),
-        image_url: i.product?.primary_image || '/images/placeholder.jpg',
-      }))
+      // Fallback: create order if not pre-created (verify prices from DB)
+      const supabase = createAdminClient()
+      const productIds = (items || []).map((i: any) => i.product?.id || i.product_id || i.id).filter(Boolean)
+      let dbProducts: any[] = []
+      if (productIds.length > 0) {
+        const { data } = await supabase.from('products').select('id, name, regular_price, sale_price, primary_image').in('id', productIds)
+        if (data) dbProducts = data
+      }
+
+      let calculatedSubtotal = 0
+      const orderItems = (items || []).map((i: any) => {
+        const pId = i.product?.id || i.product_id || i.id
+        const dbProd = dbProducts.find((p: any) => p.id === pId)
+        const unitPrice = dbProd
+          ? (dbProd.sale_price !== null && dbProd.sale_price !== undefined && Number(dbProd.sale_price) > 0 ? Number(dbProd.sale_price) : Number(dbProd.regular_price))
+          : Number(i.product?.sale_price || i.product?.regular_price || 0)
+
+        const qty = Number(i.quantity || 1)
+        calculatedSubtotal += unitPrice * qty
+
+        return {
+          id: `oi-${Math.random().toString(36).substring(2, 9)}`,
+          order_id: '',
+          product_id: dbProd?.id || pId || 'prod-custom',
+          variant_id: i.variant?.id || 'var-custom',
+          product_name: dbProd?.name || i.product?.name || 'Product',
+          size: i.variant?.size || 'Standard',
+          color: i.variant?.color || 'Standard',
+          price: unitPrice,
+          quantity: qty,
+          image_url: dbProd?.primary_image || i.product?.primary_image || '/images/placeholder.jpg',
+        }
+      })
+
+      const settings = await getStoreSettings()
+      const baseShippingFee = settings?.standard_shipping_fee !== undefined && settings?.standard_shipping_fee !== null
+        ? Number(settings.standard_shipping_fee)
+        : 80
+      const totalQuantity = (items || []).reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0)
+      const calculatedShippingFee = calculateShippingFee(totalQuantity, baseShippingFee)
+      const finalShippingFee = shippingFee !== undefined ? Number(shippingFee) : calculatedShippingFee
+
+      const finalSubtotal = subtotal || calculatedSubtotal
+      const finalTotal = total || Math.max(0, finalSubtotal - (discount || 0) + finalShippingFee)
 
       const created = await createOrder({
         customer_name: customerDetails?.full_name || 'Customer',
         customer_email: customerDetails?.email || 'customer@example.com',
         customer_phone: customerDetails?.phone || '+91 85940 41490',
         shipping_address: customerDetails,
-        subtotal: subtotal || 0,
+        subtotal: finalSubtotal,
         discount: discount || 0,
-        shipping_fee: shippingFee || 80,
-        tax: tax || 0,
-        total: total || 0,
+        shipping_fee: finalShippingFee,
+        tax: 0,
+        total: finalTotal,
         order_status: 'Processing',
         payment_status: 'Paid',
         payment_method: paymentMethod || 'Razorpay',

@@ -594,7 +594,10 @@ export default function AccountPage() {
                         <img
                           src={getOptimizedImageUrl(item.image_url, { width: 96, height: 112, crop: 'fill' }) || '/images/placeholder.jpg'}
                           alt={item.product_name}
-                          className="w-12 h-14 object-cover rounded-lg border border-border flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1596870230751-ebdfce98ec42?w=300&auto=format&fit=crop&q=80'
+                          }}
+                          className="w-12 h-14 object-cover rounded-lg border border-border flex-shrink-0 bg-stone-100"
                         />
                         <div className="flex-1 min-w-0 text-xs">
                           <h4 className="font-semibold text-charcoal truncate">{item.product_name}</h4>

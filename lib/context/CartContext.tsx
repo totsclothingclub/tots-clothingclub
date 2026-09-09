@@ -13,7 +13,8 @@ export interface CartLineItem {
 
 interface CartContextType {
   items: CartLineItem[]
-  addItem: (product: Product, variant: ProductVariant, quantity?: number) => void
+  addItem: (product: Product, variant: ProductVariant, quantity?: number, openDrawer?: boolean) => void
+  buyNow: (product: Product, variant: ProductVariant, quantity?: number) => void
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, quantity: number) => void
   clearCart: () => void
@@ -144,7 +145,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
   }
 
-  const addItem = (product: Product, variant: ProductVariant, quantity = 1) => {
+  const addItem = (product: Product, variant: ProductVariant, quantity = 1, openDrawer = true) => {
     const addQty = Math.max(1, Number(quantity) || 1)
     setItems(prev => {
       const existingIndex = prev.findIndex(
@@ -166,7 +167,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ]
       }
     })
-    setIsDrawerOpen(true)
+    if (openDrawer) {
+      setIsDrawerOpen(true)
+    }
+  }
+
+  const buyNow = (product: Product, variant: ProductVariant, quantity = 1) => {
+    const targetQty = Math.max(1, Number(quantity) || 1)
+    setItems(prev => {
+      const existingIndex = prev.findIndex(
+        item => item.product.id === product.id && item.variant.id === variant.id
+      )
+      if (existingIndex > -1) {
+        return prev.map((item, idx) =>
+          idx === existingIndex ? { ...item, quantity: targetQty } : item
+        )
+      } else {
+        return [
+          ...prev,
+          {
+            id: `${product.id}-${variant.id}`,
+            product,
+            variant,
+            quantity: targetQty
+          }
+        ]
+      }
+    })
+    setIsDrawerOpen(false)
   }
 
   const removeItem = (itemId: string) => {
@@ -191,6 +219,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         items,
         addItem,
+        buyNow,
         removeItem,
         updateQuantity,
         clearCart,
