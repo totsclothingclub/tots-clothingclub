@@ -7,6 +7,7 @@ import { Footer } from '@/components/store/Footer'
 import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { useCart } from '@/lib/context/CartContext'
 import { Trash2, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart()
@@ -37,13 +38,13 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
+
             {/* Cart Items List */}
             <div className="lg:col-span-7 space-y-4">
               {items.map(item => (
                 <div key={item.id} className="p-4 bg-white rounded-2xl border border-tots-border shadow-xs flex gap-4 min-w-0 w-full items-stretch">
                   <img
-                    src={item.product.primary_image}
+                    src={getOptimizedImageUrl(item.product.primary_image, { width: 200, height: 260, crop: 'fill' })}
                     alt={item.product.name}
                     className="w-20 sm:w-24 h-28 sm:h-32 object-cover rounded-xl border border-tots-border flex-shrink-0"
                   />

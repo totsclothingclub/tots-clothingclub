@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Heart, Star } from 'lucide-react'
 import { Product, getProductStock } from '@/lib/types'
 import { useWishlist } from '@/lib/context/WishlistContext'
+import { getOptimizedImageUrl, getCloudinarySrcSet } from '@/lib/cloudinary-utils'
 
 interface ProductCardProps {
   product: Product
@@ -28,7 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const img = hovered && hasSecondary ? (product.images![1].image_url || resolvedPrimary) : resolvedPrimary
 
   const regular = product.regular_price
-  const sale    = product.sale_price
+  const sale = product.sale_price
   const discount = product.discount_percent || (sale ? Math.round(((regular - sale) / regular) * 100) : 0)
 
   const displayPrice = sale ?? regular
@@ -45,7 +46,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       >
         <Link href={`/products/${product.slug}`} className="block w-full h-full">
           <img
-            src={img || '/images/placeholder.jpg'}
+            src={getOptimizedImageUrl(img, { width: 600, crop: 'limit' }) || '/images/placeholder.jpg'}
+            srcSet={getCloudinarySrcSet(img, [360, 480, 720], { crop: 'limit' }) || undefined}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             alt={product.name}
             className={`product-img w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 ${isOutOfStock ? 'grayscale opacity-75' : ''}`}
             loading="lazy"
@@ -87,11 +90,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             e.preventDefault()
             toggleWishlist(product)
           }}
-          className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-xs transition-transform active:scale-90 z-10 ${
-            isWishlisted
+          className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-xs transition-transform active:scale-90 z-10 ${isWishlisted
               ? 'bg-wine text-white shadow-md'
               : 'bg-white/80 text-charcoal hover:bg-white hover:text-wine shadow-2xs'
-          }`}
+            }`}
           aria-label="Toggle Wishlist"
         >
           <Heart size={14} fill={isWishlisted ? 'currentColor' : 'none'} />

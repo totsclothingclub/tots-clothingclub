@@ -7,6 +7,7 @@ import { PlusCircle, Edit, Trash2, Image as ImageIcon, ExternalLink, X, CheckCir
 import Link from 'next/link'
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export default function AdminBannersPage() {
   const { confirm } = useConfirm()
@@ -132,7 +133,7 @@ export default function AdminBannersPage() {
 
   return (
     <div className="space-y-6 pb-16">
-      
+
       {/* ── Heading ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -175,14 +176,13 @@ export default function AdminBannersPage() {
               {/* Preview Thumbnail */}
               <div className="relative w-full lg:w-72 aspect-[16/9] bg-beige rounded-lg overflow-hidden border border-border flex-shrink-0">
                 <img
-                  src={banner.desktop_image_url}
+                  src={getOptimizedImageUrl(banner.desktop_image_url, { width: 360, height: 202, crop: 'fill' })}
                   alt={banner.title}
                   className="w-full h-full object-cover object-top"
                 />
                 <span
-                  className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded shadow-xs uppercase ${
-                    banner.is_active ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-white'
-                  }`}
+                  className={`absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded shadow-xs uppercase ${banner.is_active ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-white'
+                    }`}
                 >
                   {banner.is_active ? 'Active on Store' : 'Inactive'}
                 </span>
@@ -304,18 +304,16 @@ export default function AdminBannersPage() {
                     <button
                       type="button"
                       onClick={() => setDesktopImageMode('upload')}
-                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
-                        desktopImageMode === 'upload' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                      }`}
+                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${desktopImageMode === 'upload' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                        }`}
                     >
                       Upload File
                     </button>
                     <button
                       type="button"
                       onClick={() => setDesktopImageMode('url')}
-                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
-                        desktopImageMode === 'url' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                      }`}
+                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${desktopImageMode === 'url' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                        }`}
                     >
                       Image URL
                     </button>
@@ -326,11 +324,10 @@ export default function AdminBannersPage() {
                   <div className="space-y-2">
                     <div
                       onClick={() => !uploadingDesktop && desktopFileRef.current?.click()}
-                      className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all group ${
-                        uploadingDesktop
+                      className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all group ${uploadingDesktop
                           ? 'border-gold bg-gold/5 opacity-80 cursor-wait'
                           : 'border-border hover:border-gold/80 bg-[#faf7f2] hover:bg-white'
-                      }`}
+                        }`}
                     >
                       <input
                         ref={desktopFileRef}
@@ -369,7 +366,7 @@ export default function AdminBannersPage() {
                 {editingBanner.desktop_image_url && (
                   <div className="relative aspect-[16/9] w-full max-h-36 rounded-lg overflow-hidden border border-border bg-beige mt-2">
                     <img
-                      src={editingBanner.desktop_image_url}
+                      src={getOptimizedImageUrl(editingBanner.desktop_image_url, { width: 480, height: 270, crop: 'fill' })}
                       alt="Desktop Preview"
                       className="w-full h-full object-cover object-center"
                     />
@@ -393,18 +390,16 @@ export default function AdminBannersPage() {
                     <button
                       type="button"
                       onClick={() => setMobileImageMode('upload')}
-                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
-                        mobileImageMode === 'upload' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                      }`}
+                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${mobileImageMode === 'upload' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                        }`}
                     >
                       Upload File
                     </button>
                     <button
                       type="button"
                       onClick={() => setMobileImageMode('url')}
-                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
-                        mobileImageMode === 'url' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
-                      }`}
+                      className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${mobileImageMode === 'url' ? 'bg-white text-charcoal shadow-xs' : 'text-mid hover:text-charcoal'
+                        }`}
                     >
                       Image URL
                     </button>
@@ -414,11 +409,10 @@ export default function AdminBannersPage() {
                 {mobileImageMode === 'upload' ? (
                   <div
                     onClick={() => !uploadingMobile && mobileFileRef.current?.click()}
-                    className={`border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all group ${
-                      uploadingMobile
+                    className={`border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition-all group ${uploadingMobile
                         ? 'border-gold bg-gold/5 opacity-80 cursor-wait'
                         : 'border-border hover:border-gold/80 bg-[#faf7f2] hover:bg-white'
-                    }`}
+                      }`}
                   >
                     <input
                       ref={mobileFileRef}
@@ -456,7 +450,7 @@ export default function AdminBannersPage() {
                 {editingBanner.mobile_image_url && (
                   <div className="relative aspect-[4/5] w-28 rounded-lg overflow-hidden border border-border bg-beige mt-2">
                     <img
-                      src={editingBanner.mobile_image_url}
+                      src={getOptimizedImageUrl(editingBanner.mobile_image_url, { width: 240, height: 300, crop: 'fill' })}
                       alt="Mobile Preview"
                       className="w-full h-full object-cover object-top"
                     />

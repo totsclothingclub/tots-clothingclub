@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export default function AdminInstagramPage() {
   const { confirm } = useConfirm()
@@ -80,7 +81,7 @@ export default function AdminInstagramPage() {
     setIsModalOpen(true)
   }
 
-  // Upload image only to Supabase Storage
+  // Upload image directly to Cloudinary
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -105,7 +106,7 @@ export default function AdminInstagramPage() {
       const data = await res.json()
 
       if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to upload image')
+        throw new Error(data.error || 'Failed to upload image to Cloudinary')
       }
 
       setEditingPost(prev => ({
@@ -113,7 +114,7 @@ export default function AdminInstagramPage() {
         image_url: data.url
       }))
 
-      toast.success('Image uploaded to Supabase storage successfully!', 'Image Ready')
+      toast.success('Image uploaded to Cloudinary successfully!', 'Image Ready')
     } catch (err: any) {
       console.error('Instagram image upload error:', err)
       toast.error(err.message || 'Failed to upload image.', 'Upload Error')
@@ -252,7 +253,7 @@ export default function AdminInstagramPage() {
                   {/* 4:5 Aspect Ratio Image Card */}
                   <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden">
                     <img
-                      src={post.image_url}
+                      src={getOptimizedImageUrl(post.image_url, { width: 360, height: 450, crop: 'fill' })}
                       alt={post.caption || 'Instagram Post'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -363,7 +364,7 @@ export default function AdminInstagramPage() {
                       <tr key={post.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="py-2.5 px-4">
                           <div className="w-12 h-15 rounded-md overflow-hidden bg-gray-100 border border-border aspect-[4/5]">
-                            <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                            <img src={getOptimizedImageUrl(post.image_url, { width: 100, height: 125, crop: 'fill' })} alt="" className="w-full h-full object-cover" />
                           </div>
                         </td>
                         <td className="py-2.5 px-4 font-mono text-[11px]">
@@ -472,7 +473,7 @@ export default function AdminInstagramPage() {
                   {uploadingImage ? (
                     <>
                       <Loader2 size={16} className="animate-spin text-purple-600" />
-                      <span>Uploading Image to Supabase Storage…</span>
+                      <span>Uploading Image to Cloudinary…</span>
                     </>
                   ) : (
                     <>
@@ -499,7 +500,7 @@ export default function AdminInstagramPage() {
                   <div className="pt-2 flex items-center gap-3">
                     <div className="relative w-20 aspect-[4/5] rounded-lg overflow-hidden bg-gray-100 border border-border shadow-xs">
                       <img
-                        src={editingPost.image_url}
+                        src={getOptimizedImageUrl(editingPost.image_url, { width: 160, height: 200, crop: 'fill' })}
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />

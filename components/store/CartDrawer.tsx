@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useCart } from '@/lib/context/CartContext'
 import { validateCoupon, getActiveCoupons, getStoreSettings, calculateShippingFee } from '@/lib/supabase/data-service'
 import { Coupon } from '@/lib/types'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -193,7 +194,7 @@ export const CartDrawer: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
         className="w-full sm:w-screen sm:max-w-md h-[100dvh] max-h-[100dvh] bg-tots-cream shadow-2xl flex flex-col sm:border-l border-tots-gold/30 overflow-hidden max-w-full min-w-0 animate-slidein-right touch-auto select-auto"
       >
-        
+
         {/* Drawer Header — Fixed at top of cart */}
         <div
           className="p-4 sm:p-5 border-b border-tots-border bg-tots-dark text-white flex items-center justify-between flex-shrink-0 select-none"
@@ -247,7 +248,7 @@ export const CartDrawer: React.FC = () => {
             items.map(item => (
               <div key={item.id} className="flex gap-3 sm:gap-4 p-3 bg-white rounded-xl border border-tots-border shadow-xs min-w-0 w-full items-stretch">
                 <img
-                  src={item.product.primary_image}
+                  src={getOptimizedImageUrl(item.product.primary_image, { width: 160, height: 200, crop: 'fill' })}
                   alt={item.product.name}
                   className="w-16 sm:w-20 h-20 sm:h-24 object-cover rounded-lg border border-tots-border flex-shrink-0"
                 />

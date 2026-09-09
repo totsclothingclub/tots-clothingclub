@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getProducts } from '@/lib/supabase/data-service'
 import { Product } from '@/lib/types'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 interface SearchOverlayProps {
   isOpen: boolean
@@ -80,11 +81,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose })
                 className="flex items-center gap-4 p-2.5 rounded-xl hover:bg-tots-beige transition-colors group"
               >
                 <img
-                  src={
+                  src={getOptimizedImageUrl(
                     (prod.primary_image && prod.primary_image !== '/images/placeholder.jpg')
                       ? prod.primary_image
-                      : prod.images?.[0]?.image_url || '/images/placeholder.jpg'
-                  }
+                      : prod.images?.[0]?.image_url || '/images/placeholder.jpg',
+                    { width: 120, height: 140, crop: 'fill' }
+                  )}
                   alt={prod.name}
                   className="w-14 h-16 object-cover rounded-lg border border-tots-border"
                 />

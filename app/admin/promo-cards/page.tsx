@@ -10,6 +10,7 @@ import {
 import CloudinaryUploader from '@/components/admin/CloudinaryUploader'
 import { useConfirm } from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/Toast'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 const BG_OPTIONS = [
   { value: 'wine', label: 'Wine / Burgundy', preview: '#7a1e3c' },
@@ -124,7 +125,7 @@ export default function AdminPromoCardsPage() {
         'Visibility Updated'
       )
       loadCards()
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const handleReorder = async (card: PromoCard, dir: 'up' | 'down') => {
@@ -197,9 +198,8 @@ export default function AdminPromoCardsPage() {
             return (
               <div
                 key={card.id}
-                className={`rounded-2xl border shadow-xs overflow-hidden transition-all ${
-                  card.is_active ? 'border-border' : 'border-border/40 opacity-60'
-                }`}
+                className={`rounded-2xl border shadow-xs overflow-hidden transition-all ${card.is_active ? 'border-border' : 'border-border/40 opacity-60'
+                  }`}
               >
                 {/* Mini Preview */}
                 <div
@@ -227,7 +227,7 @@ export default function AdminPromoCardsPage() {
                   {/* Image side */}
                   <div className="w-[38%] flex-shrink-0 bg-transparent overflow-hidden flex items-center justify-center">
                     {card.image_url ? (
-                      <img src={card.image_url} alt={card.title} className="w-full h-full object-cover object-top bg-transparent" />
+                      <img src={getOptimizedImageUrl(card.image_url, { width: 300, height: 240, crop: 'fill' })} alt={card.title} className="w-full h-full object-cover object-top bg-transparent" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-transparent">
                         <ImageIcon size={20} className="opacity-30" style={{ color: style.color }} />
@@ -239,9 +239,8 @@ export default function AdminPromoCardsPage() {
                     {card.display_order}
                   </div>
                   {/* Active badge */}
-                  <div className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                    card.is_active ? 'bg-emerald-500 text-white' : 'bg-gray-400 text-white'
-                  }`}>
+                  <div className={`absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${card.is_active ? 'bg-emerald-500 text-white' : 'bg-gray-400 text-white'
+                    }`}>
                     {card.is_active ? 'LIVE' : 'OFF'}
                   </div>
                 </div>
@@ -274,11 +273,10 @@ export default function AdminPromoCardsPage() {
                     <button
                       onClick={() => handleToggle(card)}
                       title={card.is_active ? 'Deactivate' : 'Activate'}
-                      className={`p-1.5 rounded-lg border transition-colors ${
-                        card.is_active
+                      className={`p-1.5 rounded-lg border transition-colors ${card.is_active
                           ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
                           : 'border-border text-mid hover:bg-beige'
-                      }`}
+                        }`}
                     >
                       {card.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
                     </button>
@@ -352,7 +350,7 @@ export default function AdminPromoCardsPage() {
                 </div>
                 <div className="w-[38%] flex-shrink-0 bg-transparent overflow-hidden flex items-center justify-center">
                   {editing.image_url ? (
-                    <img src={editing.image_url} alt="preview" className="w-full h-full object-cover object-top bg-transparent" />
+                    <img src={getOptimizedImageUrl(editing.image_url, { width: 300, height: 240, crop: 'fill' })} alt="preview" className="w-full h-full object-cover object-top bg-transparent" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-transparent">
                       <ImageIcon size={24} className="opacity-20" style={{ color: bgStyle(editing.bg_color).color }} />
@@ -440,9 +438,8 @@ export default function AdminPromoCardsPage() {
                         type="button"
                         onClick={() => setEditing(p => ({ ...p, bg_color: opt.value }))}
                         title={opt.label}
-                        className={`w-7 h-7 rounded-full border-2 transition-all ${
-                          editing.bg_color === opt.value ? 'border-gold scale-110 shadow-md' : 'border-border/60'
-                        }`}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${editing.bg_color === opt.value ? 'border-gold scale-110 shadow-md' : 'border-border/60'
+                          }`}
                         style={{ backgroundColor: opt.preview }}
                       />
                     ))}
@@ -457,11 +454,10 @@ export default function AdminPromoCardsPage() {
                         key={tc}
                         type="button"
                         onClick={() => setEditing(p => ({ ...p, text_color: tc }))}
-                        className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${
-                          editing.text_color === tc
+                        className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${editing.text_color === tc
                             ? 'bg-charcoal text-white border-charcoal'
                             : 'bg-white text-mid border-border hover:border-gold'
-                        }`}
+                          }`}
                       >
                         {tc === 'dark' ? '🌑 Dark' : '⬜ White'}
                       </button>
@@ -487,11 +483,10 @@ export default function AdminPromoCardsPage() {
                   <button
                     type="button"
                     onClick={() => setEditing(p => ({ ...p, is_active: !p.is_active }))}
-                    className={`w-full py-2.5 text-xs font-semibold rounded-lg border transition-all ${
-                      editing.is_active
+                    className={`w-full py-2.5 text-xs font-semibold rounded-lg border transition-all ${editing.is_active
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                         : 'bg-white text-mid border-border'
-                    }`}
+                      }`}
                   >
                     {editing.is_active ? '✓ Active (Visible on Website)' : '✗ Inactive (Hidden)'}
                   </button>
@@ -509,7 +504,7 @@ export default function AdminPromoCardsPage() {
                 />
                 {editing.image_url && (
                   <div className="flex items-center gap-2 mt-2">
-                    <img src={editing.image_url} alt="Card" className="w-16 h-20 object-cover rounded-lg border border-border" />
+                    <img src={getOptimizedImageUrl(editing.image_url, { width: 128, height: 160, crop: 'fill' })} alt="Card" className="w-16 h-20 object-cover rounded-lg border border-border" />
                     <div className="flex-1">
                       <p className="text-[10px] text-emerald-600 font-semibold">✓ Image uploaded</p>
                       <button

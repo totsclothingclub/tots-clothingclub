@@ -5,6 +5,7 @@ import { MobileBottomNav } from '@/components/store/MobileBottomNav'
 import { getAllOrders } from '@/lib/supabase/data-service'
 import { Package, Truck, CheckCircle2, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { getOptimizedImageUrl } from '@/lib/cloudinary-utils'
 
 export const revalidate = 0
 
